@@ -3,6 +3,8 @@ import { API_URL } from './config.js';
 
 const LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
 const url = LOCAL ? '/api' : API_URL;
+const READ_TIMEOUT_MS = 10000;
+const READ_TRIES = 4;
 export const configured = Boolean(url);
 
 let clockOffset = 0;
@@ -31,12 +33,27 @@ async function send(path, options) {
   return result;
 }
 
-export const get = (action, params = {}) => send(action ? `?${new URLSearchParams({ action, ...params })}` : '');
+// Apps Script can hang for two minutes before failing. A read or login is safe to repeat, so give up early and try again.
+async function read(path, options) {
+  for (let tries = READ_TRIES; ; tries -= 1) {
+    const timeout = new AbortController();
+    const timer = setTimeout(() => timeout.abort(), READ_TIMEOUT_MS);
+    try {
+      return await send(path, { ...options, signal: timeout.signal });
+    } catch (error) {
+      if (error.name !== 'AbortError' || tries <= 1) throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}
+
+export const get = (action, params = {}) => read(action ? `?${new URLSearchParams({ action, ...params })}` : '');
 
 // text/plain avoids the CORS preflight, which Apps Script cannot answer.
 export async function post(action, data = {}) {
   writes += 1;
-  const result = await send('', {
+  const result = await (action === 'login' ? read : send)('', {
     method: 'POST',
     headers: { 'content-type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action, pin: getPin(), ...data }),
