@@ -6,7 +6,7 @@ Bonspiels and a four-sheet curling scoreboard for the Almonte Curling Club. An o
 |---|---|---|
 | `bonspiel.html` | Bonspiel organiser (admin PIN) | Set the format, enter teams, generate and save the schedule, make draws live, seed the playoffs. |
 | `event.html` | Anyone | The public page: schedule, live and final scores, standings, brackets and teams. |
-| `admin.html` | Draw organiser (admin PIN) | Make one-off draws by hand, add logos, set stones, hammer, ends and timer minutes. Make a draw live. Adjust or reset the timer. |
+| `admin.html` | Draw organiser (admin PIN) | Make one-off draws by hand, add logos, set stones, hammer, ends and timer minutes. Make a draw live or take it off live. Adjust or reset the timer. |
 | `index.html` | Scorers (score PIN) | See all four sheets, start the draw, enter each end. Tap a sheet to score, correct an end, swap the hammer or finish the game. |
 | `tv.html` | The TV | Four sheet strips and the countdown. Casts to a Chromecast, or open it in any TV browser. |
 
@@ -31,7 +31,7 @@ The four steps on `bonspiel.html`:
 1. **Details:** name, date, format and settings. The formats are pools then playoffs, fixed games ranked on points, and single or double knockout.
 2. **Teams:** add up to 16 teams with their rosters, seeds and logos. **Assign pools** deals the seeded teams out evenly, and you can change any pool by hand.
 3. **Schedule:** enter the first draw time, then generate. The preview isn't saved until you say so. Tap two games to swap them, and the page says if a swap puts a team on two sheets or a game ahead of a result it needs.
-4. **Run:** press **Make live** for the current draw and score it as usual. In a fixed-games event, press **Fill round** after each round. When the pools end, check the seeds and press **Fill the playoff games**.
+4. **Run:** press **Make live** for the current draw and score it as usual. **Take off live** clears the scoring page and TV without losing any scores or the timer. In a fixed-games event, press **Fill round** after each round. When the pools end, check the seeds and press **Fill the playoff games**.
 
 Rules to know:
 

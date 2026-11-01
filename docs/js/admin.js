@@ -1,7 +1,7 @@
 // Admin page: create and edit draws, choose the live draw, manage logos, adjust the timer.
 import { configured, get, post, serverNow, watch } from './api.js';
 import { setupCast } from './cast.js';
-import { esc, loadLogos, logoOptions, notConfiguredNotice, paintClock, requirePin, toast } from './view.js';
+import { esc, loadLogos, logoOptions, notConfiguredNotice, paintClock, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
 const LOGO_SIZE = 160;
@@ -38,7 +38,7 @@ function renderDraws() {
     <ol>${draw.games.map((game) => `<li>${matchup(game)}</li>`).join('')}</ol>
     <footer>
       <button type="button" data-edit="${draw.id}">Edit</button>
-      ${draw.id === liveId ? '' : `<button type="button" class="primary" data-live="${draw.id}">Make live</button>`}
+      ${draw.id === liveId ? '<button type="button" data-stop-live="true">Take off live</button>' : `<button type="button" class="primary" data-live="${draw.id}">Make live</button>`}
       ${draw.bonspielId ? '' : `<button type="button" class="danger" data-delete="${draw.id}">Delete</button>`}
     </footer>
   </article>`).join('') : '<p class="empty">No draws yet. Create the first one.</p>';
@@ -151,9 +151,10 @@ function renderLive() {
 $('#new-draw').addEventListener('click', () => openEditor(blankDraw()));
 
 $('#draw-list').addEventListener('click', (event) => {
-  const { edit, live: makeLive, delete: remove } = event.target.dataset;
+  const { edit, live: makeLive, stopLive, delete: remove } = event.target.dataset;
   if (edit) openEditor(structuredClone(draws.find((draw) => draw.id === edit)));
   if (makeLive) run(() => post('goLive', { id: makeLive }), 'Draw is live');
+  if (stopLive && confirm(STOP_LIVE_WARNING)) run(() => post('stopLive'), 'Draw taken off live');
   if (remove && confirm('Delete this draw and all its scores?')) run(() => post('deleteDraw', { id: remove }), 'Draw deleted');
 });
 

@@ -8,6 +8,8 @@ export const HAMMER_ICON = `<svg class="hammer" viewBox="0 0 24 24" role="img" a
 
 export const stoneIcon = (colour) => `<span class="stone stone-${colour}" title="${colour} stones"></span>`;
 
+export const STOP_LIVE_WARNING = 'Take this draw off live? The scoring page and TV will show no draw until one is made live again.';
+
 let logos = {};
 export async function loadLogos() {
   const result = await get('logos');

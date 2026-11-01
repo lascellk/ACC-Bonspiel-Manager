@@ -29,6 +29,7 @@ var ACTIONS = {
   saveDraw: { role: 'admin', fn: saveDraw },
   deleteDraw: { role: 'admin', fn: deleteDraw },
   goLive: { role: 'admin', fn: goLive },
+  stopLive: { role: 'admin', fn: stopLive },
   saveLogo: { role: 'admin', fn: saveLogo },
   deleteLogo: { role: 'admin', fn: deleteLogo },
   saveBonspiel: { role: 'admin', fn: saveBonspiel },
@@ -263,7 +264,8 @@ function saveDraw(body) {
     next.hammer = Number(game.hammer) === 1 ? 1 : 0;
     if (current) writeRow('Games', current._row, next); else appendRow('Games', next);
   }
-  if (!liveId()) PropertiesService.getScriptProperties().setProperty('LIVE_DRAW', item.id);
+  // Only the very first draw goes live by itself, so a draw taken off live stays off when one is edited.
+  if (!row && readTab('Draws').length === 1) PropertiesService.getScriptProperties().setProperty('LIVE_DRAW', item.id);
   return { id: item.id };
 }
 
@@ -277,6 +279,10 @@ function deleteDraw(body) {
 function goLive(body) {
   findDraw(body.id);
   PropertiesService.getScriptProperties().setProperty('LIVE_DRAW', String(body.id));
+}
+
+function stopLive() {
+  PropertiesService.getScriptProperties().deleteProperty('LIVE_DRAW');
 }
 
 function saveLogo(body) {

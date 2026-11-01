@@ -5,7 +5,7 @@ import {
   playoffSeeds, scheduleProblems, SHEETS, sourceLabel, swapGames,
 } from './bonspiel.js';
 import { bracketHtml, scheduleHtml, standingsHtml } from './bonspiel-view.js';
-import { esc, loadLogos, logoHtml, logoOptions, notConfiguredNotice, requirePin, toast } from './view.js';
+import { esc, loadLogos, logoHtml, logoOptions, notConfiguredNotice, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
 const STEPS = ['Details', 'Teams', 'Schedule', 'Run'];
@@ -313,7 +313,7 @@ function renderRun() {
   document.querySelectorAll('[data-draw-actions]').forEach((slot) => {
     const id = slot.dataset.drawActions;
     slot.innerHTML = id === liveId
-      ? '<a class="top-link dark" href="index.html">Go to scoring</a>'
+      ? '<div class="button-row"><a class="top-link dark" href="index.html">Go to scoring</a><button type="button" data-stop-live="true">Take off live</button></div>'
       : `<button type="button" class="primary" data-live="${esc(id)}">Make live</button>`;
   });
 }
@@ -349,7 +349,7 @@ $('#content').addEventListener('submit', (event) => {
 $('#content').addEventListener('click', (event) => {
   const button = event.target.closest('button');
   if (!button) return;
-  const { action, open, team, removeTeam, slot, live } = button.dataset;
+  const { action, open, team, removeTeam, slot, live, stopLive } = button.dataset;
   if (open) {
     setOpen(open);
     step = 0;
@@ -358,6 +358,7 @@ $('#content').addEventListener('click', (event) => {
   if (team) openTeam(data.teams.find((item) => item.id === team));
   if (removeTeam && confirm('Delete this team?')) run(() => post('deleteTeam', { id: removeTeam }), 'Team deleted');
   if (live) run(() => post('goLive', { id: live }), 'Draw is live');
+  if (stopLive && confirm(STOP_LIVE_WARNING)) run(() => post('stopLive'), 'Draw taken off live');
   if (slot) {
     const [draw, sheet] = slot.split('/').map(Number);
     if (picked && !(picked.draw === draw && picked.sheet === sheet)) {

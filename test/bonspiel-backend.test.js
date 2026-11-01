@@ -224,6 +224,19 @@ test('a seeded round fills from the organiser once the round before is finished'
   assert.match(seed(teams).error, /already started/);
   assert.match(scorer(api, { action: 'seedRound', id, round: 2, teams }).error, /.+/);
 });
+test('a draw taken off live stays off until it is made live again', () => {
+  const { api, one } = withBracket();
+  admin(api, { action: 'goLive', id: one });
+  assert.equal(scorer(api, { action: 'stopLive' }).ok, false);
+  assert.equal(api.get().draw.id, one);
+  assert.equal(admin(api, { action: 'stopLive' }).ok, true);
+  assert.equal(api.get().draw, null);
+  assert.equal(admin(api, { action: 'saveDraw', draw: { id: one, name: 'Edited' } }).ok, true);
+  assert.equal(admin(api, { action: 'saveDraw', draw: { name: 'New' } }).ok, true);
+  assert.equal(api.get().draw, null);
+  admin(api, { action: 'goLive', id: one });
+  assert.equal(api.get().draw.name, 'Edited');
+});
 test('end and score options are saved and forced into range', () => {
   const { api, id } = withBonspiel();
   const options = { trackEnds: true, pointsPerEnd: 3, scorePoints: true, maxEndPoints: 99 };
