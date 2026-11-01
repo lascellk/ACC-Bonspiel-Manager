@@ -13,6 +13,7 @@ let live = null;
 let editing = null;
 let bonspiels = [];
 let sourceTeams = []; // Teams of the bonspiel chosen in the draw editor.
+let tvBonspiel = ''; // The bonspiel on the TV, or '' for the scoreboard.
 
 const blankGame = (sheet) => ({ sheet, team1: '', team2: '', logo1: '', logo2: '', stone: 'red', hammer: 0 });
 const blankDraw = () => ({
@@ -26,6 +27,17 @@ async function refresh() {
   liveId = result.liveId;
   bonspiels = list.bonspiels;
   renderDraws();
+  renderTvView();
+}
+
+function renderTvView() {
+  const choice = $('#tv-view [value=bonspiel]');
+  const select = $('#tv-bonspiel');
+  $('#tv-view [value=scoreboard]').checked = !tvBonspiel;
+  choice.checked = Boolean(tvBonspiel);
+  choice.disabled = !bonspiels.length;
+  select.innerHTML = bonspiels.map((item) => `<option value="${esc(item.id)}" ${item.id === tvBonspiel ? 'selected' : ''}>${esc(item.name)}</option>`).join('');
+  select.hidden = !tvBonspiel;
 }
 
 function matchup(game) {
@@ -179,6 +191,14 @@ function renderLive() {
 
 $('#new-draw').addEventListener('click', () => openEditor(blankDraw()));
 
+$('#tv-view').addEventListener('change', () => {
+  const bonspielId = $('#tv-view [value=bonspiel]').checked ? $('#tv-bonspiel').value : '';
+  run(async () => {
+    await post('setTvView', { bonspielId });
+    tvBonspiel = bonspielId;
+  }, bonspielId ? `TV shows ${bonspielName(bonspielId)}` : 'TV shows the scoreboard');
+});
+
 $('#draw-list').addEventListener('click', (event) => {
   const { edit, live: makeLive, stopLive, delete: remove } = event.target.dataset;
   if (edit) openEditor(structuredClone(draws.find((draw) => draw.id === edit)));
@@ -255,9 +275,14 @@ async function start() {
   renderLogos();
   await refresh();
   $('#new-draw').disabled = false; // The form needs the bonspiels for Teams from.
-  watch((next) => {
+  watch((next, { tv }) => {
     live = next;
     renderLive();
+    // Rebuilt only on a change, so a poll can't close the list while it is open.
+    if ((tv || '') !== tvBonspiel) {
+      tvBonspiel = tv || '';
+      renderTvView();
+    }
   });
   setInterval(() => {
     if (live) paintClock($('#admin-clock'), live, serverNow());

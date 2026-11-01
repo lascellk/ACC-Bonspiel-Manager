@@ -42,7 +42,7 @@ export async function post(action, data = {}) {
     body: JSON.stringify({ action, pin: getPin(), ...data }),
   });
   writes += 1;
-  listener(result.draw);
+  listener(result.draw, result);
   return result;
 }
 
@@ -53,8 +53,8 @@ export function watch(onDraw, onHealth = () => {}, intervalMs = 4000) {
     if (document.visibilityState !== 'hidden') {
       const seen = writes;
       try {
-        const { draw } = await get();
-        if (seen === writes) onDraw(draw);
+        const result = await get();
+        if (seen === writes) onDraw(result.draw, result);
         onHealth(true);
       } catch {
         onHealth(false);

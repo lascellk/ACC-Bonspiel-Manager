@@ -6,7 +6,7 @@ Bonspiels and a four-sheet curling scoreboard for the Almonte Curling Club. An o
 |---|---|---|
 | `bonspiel.html` | Bonspiel organiser (admin PIN) | Set the format, enter teams, generate and save the schedule, make draws live, seed the playoffs. |
 | `event.html` | Anyone | The public page: schedule, live and final scores, standings, brackets and teams. |
-| `admin.html` | Draw organiser (admin PIN) | Make one-off draws by hand, add logos, set stones, hammer, ends and timer minutes. Make a draw live or take it off live. Adjust or reset the timer. |
+| `admin.html` | Draw organiser (admin PIN) | Make one-off draws by hand, add logos, set stones, hammer, ends and timer minutes. Make a draw live or take it off live. Adjust or reset the timer. Choose what the TV shows. |
 | `index.html` | Scorers (score PIN) | See all four sheets, start the draw, enter each end. Tap a sheet to score, correct an end, swap the hammer or finish the game. |
 | `tv.html` | The TV | Four sheet strips and the countdown. Casts to a Chromecast, or open it in any TV browser. |
 
@@ -83,6 +83,8 @@ The Cast app is published, so it runs on any Cast device without registering tes
 - **Name:** `ACC Bonspiel Manager`
 - **Receiver Application URL:** `https://lascellk.github.io/ACC-Bonspiel-Manager/tv.html?cast=1`
 - Put the Application ID in `CAST_APP_ID` in `docs/js/config.js`.
+
+**TV shows** on the admin page switches the TV between the scoreboard and a bonspiel's public page, within about 5 seconds and without restarting the cast. The bonspiel page moves through its tabs by itself, and slowly scrolls any tab too long for the screen. The TV stays on your choice until you change it, including when a draw goes live.
 
 The Cast icon is at the top of the scoring and admin pages. If casting can't start, tapping it says why.
 

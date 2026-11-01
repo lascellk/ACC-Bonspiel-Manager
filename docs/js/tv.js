@@ -7,6 +7,16 @@ const $ = (selector) => document.querySelector(selector);
 const LOGO_REFRESH_MS = 5 * 60000;
 let draw = null;
 let shown = '';
+let eventId = '';
+
+// The Cast receiver has to stay on this page, so the bonspiel page opens in a frame over the scoreboard.
+function showEvent(id) {
+  if (id === eventId) return;
+  eventId = id;
+  const frame = $('#tv-event');
+  frame.hidden = !id;
+  frame.src = id ? `event.html?id=${encodeURIComponent(id)}&tv=1` : 'about:blank';
+}
 
 function sheetHtml(game, columns) {
   const label = `<div class="tv-label"><small>Sheet</small><b>${game.sheet}</b></div>`;
@@ -56,9 +66,10 @@ async function start() {
   await loadLogos().catch(() => {});
   setInterval(() => loadLogos().then(() => { shown = ''; render(); }).catch(() => {}), LOGO_REFRESH_MS);
   watch(
-    (next) => {
+    (next, { tv }) => {
       draw = next;
       render();
+      showEvent(tv || '');
     },
     (online) => $('#tv-offline').toggleAttribute('hidden', online),
   );

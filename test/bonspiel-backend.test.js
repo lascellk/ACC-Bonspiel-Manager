@@ -267,6 +267,19 @@ test('a hand-made draw links to the bonspiel chosen for it, and keeps its start 
   const saved = api.get({ action: 'bonspiel', id }).draws[0];
   assert.deepEqual([saved.startsAt, saved.teamsFrom, saved.bonspielId], ['2026-11-06T10:15', '', id]);
 });
+test('the TV can show a bonspiel page and go back to the scoreboard', () => {
+  const { api, id } = withBonspiel();
+  assert.equal(api.get().tv, '');
+  assert.equal(scorer(api, { action: 'setTvView', bonspielId: id }).ok, false);
+  assert.match(admin(api, { action: 'setTvView', bonspielId: 'nope' }).error, /no longer exists/);
+  assert.equal(admin(api, { action: 'setTvView', bonspielId: id }).tv, id);
+  assert.equal(api.get().tv, id);
+  assert.equal(admin(api, { action: 'setTvView', bonspielId: '' }).tv, '');
+  assert.equal(api.get().tv, '');
+  admin(api, { action: 'setTvView', bonspielId: id });
+  admin(api, { action: 'deleteBonspiel', id });
+  assert.equal(api.get().tv, '');
+});
 test('a draw taken off live stays off until it is made live again', () => {
   const { api, one } = withBracket();
   admin(api, { action: 'goLive', id: one });

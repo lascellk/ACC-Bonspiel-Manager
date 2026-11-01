@@ -30,6 +30,7 @@ var ACTIONS = {
   deleteDraw: { role: 'admin', fn: deleteDraw },
   goLive: { role: 'admin', fn: goLive },
   stopLive: { role: 'admin', fn: stopLive },
+  setTvView: { role: 'admin', fn: setTvView },
   saveLogo: { role: 'admin', fn: saveLogo },
   renameLogo: { role: 'admin', fn: renameLogo },
   deleteLogo: { role: 'admin', fn: deleteLogo },
@@ -90,7 +91,9 @@ function respond(work) {
   try {
     out = work();
     out.ok = true;
-    out.draw = liveDraw();
+    var live = liveState();
+    out.draw = live.draw;
+    out.tv = live.tv || '';
   } catch (err) {
     out = { ok: false, error: err.message };
   }
@@ -205,17 +208,15 @@ function buildLive() {
   return draw;
 }
 
-function liveDraw() {
-  var cache = CacheService.getScriptCache();
-  var hit = cache.get(CACHE_KEY);
-  if (hit) return JSON.parse(hit).draw;
-  var draw = buildLive();
-  cacheLive(draw);
-  return draw;
+function liveState() {
+  var hit = CacheService.getScriptCache().get(CACHE_KEY);
+  return hit ? JSON.parse(hit) : cacheLive(buildLive());
 }
 
 function cacheLive(draw) {
-  CacheService.getScriptCache().put(CACHE_KEY, JSON.stringify({ draw: draw }), 60);
+  var state = { draw: draw, tv: tvBonspiel() };
+  CacheService.getScriptCache().put(CACHE_KEY, JSON.stringify(state), 60);
+  return state;
 }
 
 function findDraw(id) {
@@ -290,6 +291,20 @@ function goLive(body) {
 
 function stopLive() {
   PropertiesService.getScriptProperties().deleteProperty('LIVE_DRAW');
+}
+
+// The bonspiel whose public page is on the TV, or '' for the scoreboard.
+function tvBonspiel() {
+  return PropertiesService.getScriptProperties().getProperty('TV_BONSPIEL') || '';
+}
+
+function setTvView(body) {
+  var props = PropertiesService.getScriptProperties();
+  if (!body.bonspielId) {
+    props.deleteProperty('TV_BONSPIEL');
+    return;
+  }
+  props.setProperty('TV_BONSPIEL', String(findBonspiel(body.bonspielId).id));
 }
 
 function saveLogo(body) {
@@ -559,6 +574,7 @@ function removeDraws(draws) {
 
 function deleteBonspiel(body) {
   var row = findBonspiel(body.id);
+  if (tvBonspiel() === String(body.id)) setTvView({});
   removeDraws(drawsOf(body.id));
   deleteRows('Teams', teamsOf(body.id));
   deleteRows('Bonspiels', [findBonspiel(row.id)]);
