@@ -224,6 +224,25 @@ test('a seeded round fills from the organiser once the round before is finished'
   assert.match(seed(teams).error, /already started/);
   assert.match(scorer(api, { action: 'seedRound', id, round: 2, teams }).error, /.+/);
 });
+test('a schedule with no scores can be deleted, and its live draw goes with it', () => {
+  const { api, id, one, score } = withBracket();
+  admin(api, { action: 'goLive', id: one });
+  assert.equal(scorer(api, { action: 'deleteSchedule', id }).ok, false);
+  const handMade = admin(api, { action: 'saveDraw', draw: { name: 'One-off' } }).id;
+  score(one, 1, 0);
+  assert.match(admin(api, { action: 'deleteSchedule', id }).error, /Scores have been entered/);
+  assert.equal(api.get({ action: 'bonspiel', id }).draws.length, 2);
+  admin(api, { action: 'setEnd', drawId: one, sheet: 1, index: 0, end: null });
+  assert.equal(admin(api, { action: 'deleteSchedule', id }).ok, true);
+  const after = api.get({ action: 'bonspiel', id });
+  assert.equal(after.draws.length, 0);
+  assert.equal(after.teams.length, 4);
+  assert.equal(after.bonspiel.status, 'setup');
+  assert.equal(api.get().draw, null);
+  assert.deepEqual(api.get({ action: 'draws' }).draws.map((draw) => draw.id), [handMade]);
+  assert.equal(api.get({ action: 'draws' }).draws[0].games.length, 4);
+  assert.match(admin(api, { action: 'deleteSchedule', id }).error, /no schedule/);
+});
 test('a draw taken off live stays off until it is made live again', () => {
   const { api, one } = withBracket();
   admin(api, { action: 'goLive', id: one });

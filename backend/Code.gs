@@ -39,6 +39,7 @@ var ACTIONS = {
   deleteTeam: { role: 'admin', fn: deleteTeam },
   saveSeeding: { role: 'admin', fn: saveSeeding },
   saveSchedule: { role: 'admin', fn: saveSchedule },
+  deleteSchedule: { role: 'admin', fn: deleteSchedule },
   seedPlayoffs: { role: 'admin', fn: seedPlayoffs },
   seedRound: { role: 'admin', fn: seedRound }
 };
@@ -663,6 +664,17 @@ function saveSchedule(body) {
   appendRows('Games', gameRows);
   row = findBonspiel(body.id);
   row.status = 'scheduled';
+  writeRow('Bonspiels', row._row, row);
+}
+
+function deleteSchedule(body) {
+  findBonspiel(body.id);
+  var draws = drawsOf(body.id);
+  if (!draws.length) throw new Error('There is no schedule to delete');
+  if (gamesOf(draws).some(hasStarted)) throw new Error('Scores have been entered, so this schedule can\'t be deleted');
+  removeDraws(draws);
+  var row = findBonspiel(body.id);
+  row.status = 'setup';
   writeRow('Bonspiels', row._row, row);
 }
 

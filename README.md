@@ -46,7 +46,9 @@ Rules to know:
 - With an odd number of teams, games per team must be even. A team sits out each round, and those who have played least go first next round, so a short last round can follow to even up the games.
 - A filled round stays as it is if an earlier score is corrected afterwards, so check the scores before pressing **Fill round**.
 - Double knockout ends with one final between the two bracket winners, with no reset game.
-- Once any score is entered, the schedule can't be replaced.
+- **Delete schedule** on the Schedule step removes the schedule and its draws, and keeps the teams.
+- Once any score is entered, the schedule can't be replaced or deleted.
+- On `admin.html`, a hand-made draw can take its teams from a bonspiel: choose it under **Teams from**, then pick each team from the list or type any name. A picked team brings its logo. The draw stays a one-off, so its scores don't count in that bonspiel's standings.
 - On `admin.html`, a bonspiel draw can have its stones, hammer and timer changed, but not its teams, and it can't be deleted there.
 
 ## Setup

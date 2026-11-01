@@ -228,8 +228,9 @@ function renderSchedule() {
     <label>Draws per day <input type="number" name="perDay" min="1" max="12" value="${timing.perDay}"></label>
     <div class="grow button-row">
       <button type="button" class="primary" data-action="generate" ${started ? 'disabled' : ''}>${saved ? 'Generate a new schedule' : 'Generate schedule'}</button>
+      ${saved ? `<button type="button" class="danger" data-action="delete-schedule" ${started ? 'disabled' : ''}>Delete schedule</button>` : ''}
     </div>
-    ${started ? '<p class="note grow">Scores have been entered, so this schedule can no longer be replaced.</p>' : ''}
+    ${started ? '<p class="note grow">Scores have been entered, so this schedule can no longer be replaced or deleted.</p>' : ''}
   </form>`;
   if (!preview) {
     $('#content').innerHTML = `${controls}<section class="panel">${scheduleHtml(data.draws, liveId)}</section>`;
@@ -390,6 +391,12 @@ $('#content').addEventListener('click', (event) => {
   }
   if (action === 'generate') generate();
   if (action === 'save-schedule') saveSchedule();
+  if (action === 'delete-schedule' && confirm('Delete this schedule and all its draws? The teams stay.')) {
+    run(async () => {
+      await post('deleteSchedule', { id: data.bonspiel.id });
+      preview = null;
+    }, 'Schedule deleted');
+  }
   if (action === 'discard') {
     preview = null;
     render();

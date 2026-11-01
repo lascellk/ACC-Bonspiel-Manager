@@ -11,6 +11,8 @@ let liveId = '';
 let logos = [];
 let live = null;
 let editing = null;
+let bonspiels = [];
+let sourceTeams = []; // Teams of the bonspiel chosen in the draw editor.
 
 const blankGame = (sheet) => ({ sheet, team1: '', team2: '', logo1: '', logo2: '', stone: 'red', hammer: 0 });
 const blankDraw = () => ({
@@ -19,9 +21,10 @@ const blankDraw = () => ({
 });
 
 async function refresh() {
-  const result = await get('draws');
+  const [result, list] = await Promise.all([get('draws'), get('bonspiels')]);
   draws = result.draws;
   liveId = result.liveId;
+  bonspiels = list.bonspiels;
   renderDraws();
 }
 
@@ -49,7 +52,7 @@ function gameFields(game) {
   // Bonspiel games take their teams from the schedule, so they can only be read here.
   const fixed = game.gameId ? 'disabled' : '';
   const team = (n) => `<div class="team-fields">
-    <label>Team ${n} name <input name="team${n}-${s}" value="${esc(game[`team${n}`])}" maxlength="40" autocomplete="off" ${fixed}></label>
+    <label>Team ${n} name <input name="team${n}-${s}" list="team-names" value="${esc(game[`team${n}`])}" maxlength="40" autocomplete="off" ${fixed}></label>
     <label>Logo <select name="logo${n}-${s}" ${fixed}>${logoOptions(logos, game[`logo${n}`])}</select></label>
   </div>`;
   return `<fieldset class="game-fields">
@@ -68,8 +71,22 @@ function gameFields(game) {
   </fieldset>`;
 }
 
+function teamSourceField(draw) {
+  if (draw.bonspielId || !bonspiels.length) return '';
+  return `<label class="grow">Teams from <select name="teamSource">
+    <option value="">No bonspiel</option>
+    ${bonspiels.map((item) => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join('')}
+  </select></label>`;
+}
+
+async function chooseTeamSource(id) {
+  sourceTeams = id ? (await get('bonspiel', { id })).teams : [];
+  $('#team-names').innerHTML = sourceTeams.map((team) => `<option value="${esc(team.name)}"></option>`).join('');
+}
+
 function openEditor(draw) {
   editing = draw;
+  sourceTeams = [];
   const dialog = $('#draw-dialog');
   dialog.innerHTML = `<form id="draw-form">
     <header><h2>${draw.id ? 'Edit draw' : 'New draw'}</h2><button type="button" class="close" aria-label="Close">×</button></header>
@@ -79,7 +96,9 @@ function openEditor(draw) {
       <label>Ends <input type="number" name="ends" min="1" max="12" value="${draw.ends}" required></label>
       <label>Timer (minutes) <input type="number" name="minutes" min="1" max="600" value="${draw.minutes}" required></label>
       <label class="check"><input type="checkbox" name="showTimer" ${draw.showTimer ? 'checked' : ''}> Show timer</label>
+      ${teamSourceField(draw)}
     </div>
+    <datalist id="team-names"></datalist>
     ${draw.games.map(gameFields).join('')}
     <footer><button type="submit" class="primary">Save draw</button></footer>
   </form>`;
@@ -161,6 +180,17 @@ $('#draw-list').addEventListener('click', (event) => {
 
 $('#draw-dialog').addEventListener('click', (event) => {
   if (event.target.classList.contains('close')) $('#draw-dialog').close();
+});
+
+$('#draw-dialog').addEventListener('change', (event) => {
+  if (event.target.name === 'teamSource') chooseTeamSource(event.target.value).catch((error) => toast(error.message));
+});
+
+// A team picked from the list brings its logo. A typed name leaves the logo alone.
+$('#draw-dialog').addEventListener('input', (event) => {
+  const slot = /^team(\d)-(\d)$/.exec(event.target.name);
+  const team = slot && sourceTeams.find((item) => item.name === event.target.value);
+  if (team) event.currentTarget.querySelector(`[name=logo${slot[1]}-${slot[2]}]`).value = team.logo;
 });
 
 $('#draw-dialog').addEventListener('submit', (event) => {
