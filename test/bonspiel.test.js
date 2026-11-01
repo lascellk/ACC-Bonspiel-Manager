@@ -204,6 +204,33 @@ test('playoff games do not count in the standings', () => {
   const rows = standings(makeTeams(2), [{ ...played('t1', 't2', 3, 1), phase: 'playoff' }], settings);
   assert.equal(rows[0].played, 0);
 });
+const endsGame = {
+  final: true, phase: 'pool', team1Id: 't1', team2Id: 't2',
+  ends: [{ team: 0, pts: 5 }, { team: null, pts: 0 }, { team: 1, pts: 2 }, { team: 1, pts: 1 }, { team: 1, pts: 1 }],
+};
+const rowsById = (rows) => Object.fromEntries(rows.map((row) => [row.team.id, row]));
+
+test('ends won and capped scores add nothing unless switched on', () => {
+  const { t1, t2 } = rowsById(standings(makeTeams(2), [endsGame], { ...settings, maxEndPoints: 2 }));
+  assert.deepEqual([t1.points, t2.points], [2, 0]);
+  assert.deepEqual([t1.endsWon, t2.endsWon, t1.scored, t2.scored], [1, 3, 2, 4]);
+});
+test('each end won earns points, and a blank end earns none', () => {
+  const { t1, t2 } = rowsById(standings(makeTeams(2), [endsGame], { ...settings, trackEnds: true, pointsPerEnd: 2 }));
+  assert.deepEqual([t1.points, t2.points], [2 + 2, 0 + 6]);
+});
+test('total score earns points, with an end limit that leaves the real score alone', () => {
+  const uncapped = rowsById(standings(makeTeams(2), [endsGame], { ...settings, scorePoints: true, maxEndPoints: 0 }));
+  assert.deepEqual([uncapped.t1.points, uncapped.t2.points], [2 + 5, 0 + 4]);
+  const capped = rowsById(standings(makeTeams(2), [endsGame], { ...settings, scorePoints: true, maxEndPoints: 2 }));
+  assert.deepEqual([capped.t1.points, capped.t2.points], [2 + 2, 0 + 4]);
+  assert.deepEqual([capped.t1.diff, capped.t2.diff], [1, -1]);
+});
+test('both options add up and can change the order', () => {
+  const rows = standings(makeTeams(2), [endsGame], { ...settings, trackEnds: true, pointsPerEnd: 1, scorePoints: true, maxEndPoints: 2 });
+  assert.equal(rows[0].team.id, 't2');
+  assert.deepEqual(rows.map((row) => row.points), [0 + 3 + 4, 2 + 1 + 2]);
+});
 test('playoff seeds take pool winners first', () => {
   const teams = makeTeams(4).map((team, i) => ({ ...team, pool: i < 2 ? 'A' : 'B' }));
   const games = [played('t1', 't2', 5, 1), played('t3', 't4', 9, 1)];

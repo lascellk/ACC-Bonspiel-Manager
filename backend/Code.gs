@@ -501,6 +501,10 @@ function cleanSettings(settings) {
     pointsWin: wholeNumber(s.pointsWin, 2, 0, 10),
     pointsTie: wholeNumber(s.pointsTie, 1, 0, 10),
     pointsLoss: wholeNumber(s.pointsLoss, 0, 0, 10),
+    trackEnds: s.trackEnds === true,
+    pointsPerEnd: wholeNumber(s.pointsPerEnd, 1, 0, 10),
+    scorePoints: s.scorePoints === true,
+    maxEndPoints: wholeNumber(s.maxEndPoints, 0, 0, 8),
     ends: wholeNumber(s.ends, 8, 1, 12),
     minutes: wholeNumber(s.minutes, 95, 1, 600)
   };

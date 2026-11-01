@@ -81,8 +81,12 @@ function render() {
 
 // ----- 1. Details
 
-function number(name, label, value, min, max, shownFor = '') {
-  return `<label data-for="${shownFor}">${label} <input type="number" name="${name}" min="${min}" max="${max}" value="${value}" required></label>`;
+function number(name, label, value, min, max, shownFor = '', needs = '') {
+  return `<label data-for="${shownFor}" data-needs="${needs}">${label} <input type="number" name="${name}" min="${min}" max="${max}" value="${value}" required></label>`;
+}
+
+function checkbox(name, label, checked, shownFor) {
+  return `<label class="check" data-for="${shownFor}"><input type="checkbox" name="${name}" ${checked ? 'checked' : ''}> ${label}</label>`;
 }
 
 function renderDetails() {
@@ -100,6 +104,10 @@ function renderDetails() {
     ${number('pointsWin', 'Points for a win', s.pointsWin, 0, 10, 'pools fixed')}
     ${number('pointsTie', 'Points for a tie', s.pointsTie, 0, 10, 'pools fixed')}
     ${number('pointsLoss', 'Points for a loss', s.pointsLoss, 0, 10, 'pools fixed')}
+    ${checkbox('trackEnds', 'Track ends won', s.trackEnds, 'pools fixed')}
+    ${number('pointsPerEnd', 'Points for each end won', s.pointsPerEnd, 0, 10, 'pools fixed', 'trackEnds')}
+    ${checkbox('scorePoints', 'Add points for total score', s.scorePoints, 'pools fixed')}
+    ${number('maxEndPoints', 'Most points an end (0 for no limit)', s.maxEndPoints, 0, 8, 'pools fixed', 'scorePoints')}
     ${number('ends', 'Ends', s.ends, 1, 12)}
     ${number('minutes', 'Timer (minutes)', s.minutes, 1, 600)}
     <div class="grow button-row">
@@ -113,14 +121,21 @@ function renderDetails() {
 function showFormatFields() {
   const format = $('#details [name=format]').value;
   document.querySelectorAll('#details [data-for]').forEach((field) => {
-    field.hidden = Boolean(field.dataset.for) && !field.dataset.for.split(' ').includes(format);
+    const { needs } = field.dataset;
+    field.hidden = (Boolean(field.dataset.for) && !field.dataset.for.split(' ').includes(format))
+      || (Boolean(needs) && !$(`#details [name=${needs}]`).checked);
   });
 }
 
 function saveDetails(form) {
   const values = Object.fromEntries(new FormData(form));
-  const { name, startDate, format, ...numbers } = values;
-  const settings = { ...DEFAULT_SETTINGS, ...Object.fromEntries(Object.entries(numbers).map(([key, value]) => [key, Number(value)])) };
+  const { name, startDate, format, trackEnds, scorePoints, ...numbers } = values;
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    ...Object.fromEntries(Object.entries(numbers).map(([key, value]) => [key, Number(value)])),
+    trackEnds: Boolean(trackEnds),
+    scorePoints: Boolean(scorePoints),
+  };
   const id = data?.bonspiel.id || '';
   run(async () => {
     const result = await post('saveBonspiel', { bonspiel: { id, name, startDate, format, settings } });
@@ -294,7 +309,7 @@ $('#steps').addEventListener('click', (event) => {
 });
 
 $('#content').addEventListener('change', (event) => {
-  if (event.target.name === 'format') showFormatFields();
+  if (['format', 'trackEnds', 'scorePoints'].includes(event.target.name)) showFormatFields();
   if (event.target.dataset.time !== undefined) preview[Number(event.target.dataset.time)].startsAt = event.target.value;
 });
 

@@ -276,6 +276,7 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
 .form-grid h2, .form-grid .grow { grid-column: 1 / -1; }
 .form-grid label, .seed-list label, .time { display: grid; gap: 2px; font-size: 13px; color: var(--muted); }
+.form-grid label.check { display: flex; align-items: center; gap: 6px; min-height: 36px; font-size: 15px; color: var(--ink); }
 .draw-fields.two { grid-template-columns: repeat(2, 1fr); }
 .note { margin: 8px 0; color: var(--muted); font-size: 14px; }
 .top-link.dark { color: var(--ink); }

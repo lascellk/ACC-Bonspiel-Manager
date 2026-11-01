@@ -43,23 +43,29 @@ export function scheduleHtml(draws, liveId) {
 export function standingsHtml(data) {
   const { bonspiel, teams, draws } = data;
   if (bonspiel.format === 'single' || bonspiel.format === 'double') return '<p class="empty">This format has a bracket, not standings.</p>';
+  const { trackEnds, scorePoints, maxEndPoints } = bonspiel.settings;
   const groups = poolStandings(teams, flatGames(draws), bonspiel.settings);
+  const keys = [
+    trackEnds && 'EW is ends won.',
+    scorePoints && `Sc is points scored${maxEndPoints ? `, counting at most ${maxEndPoints} an end` : ''}.`,
+  ].filter(Boolean);
   let flagged = false;
   const tables = groups.map(({ pool, rows }) => `<div class="table-wrap">
     ${pool ? `<h3>Pool ${esc(pool)}</h3>` : ''}
     <table class="standings">
-      <thead><tr><th>#</th><th class="left">Team</th><th>G</th><th>W</th><th>T</th><th>L</th><th>Pts</th><th>Diff</th></tr></thead>
+      <thead><tr><th>#</th><th class="left">Team</th><th>G</th><th>W</th><th>T</th><th>L</th>${trackEnds ? '<th>EW</th>' : ''}${scorePoints ? '<th>Sc</th>' : ''}<th>Pts</th><th>Diff</th></tr></thead>
       <tbody>${rows.map((row) => {
         flagged = flagged || (row.unresolved && row.played > 0);
         return `<tr>
           <td>${row.rank}${row.unresolved && row.played > 0 ? '*' : ''}</td><td class="left">${esc(row.team.name)}</td><td>${row.played}</td>
-          <td>${row.won}</td><td>${row.tied}</td><td>${row.lost}</td><td><b>${row.points}</b></td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td>
+          <td>${row.won}</td><td>${row.tied}</td><td>${row.lost}</td>${trackEnds ? `<td>${row.endsWon}</td>` : ''}${scorePoints ? `<td>${row.scored}</td>` : ''}<td><b>${row.points}</b></td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td>
         </tr>`;
       }).join('')}</tbody>
     </table>
   </div>`).join('');
   const note = flagged ? '<p class="note">* Still tied on points, head-to-head and difference. The organiser decides these teams\' order.</p>' : '';
-  return `<div class="standings-grid">${tables}</div>${note}`;
+  const key = keys.length ? `<p class="note">${esc(keys.join(' '))}</p>` : '';
+  return `<div class="standings-grid">${tables}</div>${key}${note}`;
 }
 
 export function bracketHtml(draws) {

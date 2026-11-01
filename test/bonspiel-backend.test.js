@@ -192,3 +192,13 @@ test('saved settings are forced into range', () => {
   assert.equal(saved.minutes, 95);
   assert.equal(admin(api, { action: 'saveBonspiel', bonspiel: { name: 'x', format: 'nope' } }).ok, false);
 });
+test('end and score options are saved and forced into range', () => {
+  const { api, id } = withBonspiel();
+  const options = { trackEnds: true, pointsPerEnd: 3, scorePoints: true, maxEndPoints: 99 };
+  admin(api, { action: 'saveBonspiel', bonspiel: { id, name: 'x', format: 'pools', settings: options } });
+  const { settings: saved } = api.get({ action: 'bonspiel', id }).bonspiel;
+  assert.deepEqual([saved.trackEnds, saved.pointsPerEnd, saved.scorePoints, saved.maxEndPoints], [true, 3, true, 8]);
+  const fresh = withBonspiel();
+  const { settings: blank } = fresh.api.get({ action: 'bonspiel', id: fresh.id }).bonspiel;
+  assert.deepEqual([blank.trackEnds, blank.pointsPerEnd, blank.scorePoints, blank.maxEndPoints], [false, 1, false, 0]);
+});

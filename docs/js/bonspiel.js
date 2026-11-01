@@ -11,6 +11,7 @@ export const FORMATS = {
 };
 export const DEFAULT_SETTINGS = {
   gamesPerTeam: 3, poolCount: 2, playoffSize: 4, pointsWin: 2, pointsTie: 1, pointsLoss: 0, ends: 8, minutes: 95,
+  trackEnds: false, pointsPerEnd: 1, scorePoints: false, maxEndPoints: 0,
 };
 
 const POOL_NAMES = ['A', 'B', 'C', 'D'];
@@ -307,20 +308,33 @@ function pointsFor(settings, mine, theirs) {
   return mine === theirs ? settings.pointsTie : settings.pointsLoss;
 }
 
-// Rank by points, then head-to-head among the tied teams, then points-for difference. Draw-shot
-// results aren't recorded, so a tie that remains is flagged for the organiser with tied: true.
+const endsWon = (game, side) => game.ends.filter((end) => end.team === side && end.pts > 0).length;
+
+// A limit of 0 counts every point. The limit never changes the game's real score.
+const cappedScore = (game, side, limit) => game.ends.filter((end) => end.team === side)
+  .reduce((sum, end) => sum + (limit ? Math.min(end.pts, limit) : end.pts), 0);
+
+// Rank by points, then head-to-head among the tied teams, then points-for difference. Head-to-head
+// counts only win, tie and loss points. Draw-shot results aren't recorded, so a tie that remains is
+// flagged for the organiser with tied: true.
 export function standings(teams, games, settings) {
-  const rows = teams.map((team) => ({ team, played: 0, won: 0, tied: 0, lost: 0, points: 0, pf: 0, pa: 0, unresolved: false }));
+  const rows = teams.map((team) => ({ team, played: 0, won: 0, tied: 0, lost: 0, points: 0, pf: 0, pa: 0, endsWon: 0, scored: 0, unresolved: false }));
   const row = new Map(rows.map((item) => [item.team.id, item]));
   const counted = games.filter((game) => game.final && game.phase === 'pool' && row.has(game.team1Id) && row.has(game.team2Id));
   counted.forEach((game) => {
     const [one, two] = totals(game);
-    [[game.team1Id, one, two], [game.team2Id, two, one]].forEach(([id, mine, theirs]) => {
+    [[game.team1Id, one, two, 0], [game.team2Id, two, one, 1]].forEach(([id, mine, theirs, side]) => {
       const item = row.get(id);
+      const ends = endsWon(game, side);
+      const scored = cappedScore(game, side, settings.maxEndPoints);
       item.played += 1;
       item.pf += mine;
       item.pa += theirs;
+      item.endsWon += ends;
+      item.scored += scored;
       item.points += pointsFor(settings, mine, theirs);
+      if (settings.trackEnds) item.points += ends * settings.pointsPerEnd;
+      if (settings.scorePoints) item.points += scored;
       if (mine > theirs) item.won += 1; else if (mine < theirs) item.lost += 1; else item.tied += 1;
     });
   });
