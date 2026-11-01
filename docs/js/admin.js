@@ -121,6 +121,7 @@ function renderLogos() {
   $('#logo-list').innerHTML = logos.map((logo) => `<li>
     <img class="logo" src="${esc(logo.data)}" alt="">
     <span>${esc(logo.name)}</span>
+    <button type="button" data-rename="${esc(logo.id)}">Rename</button>
     <button type="button" class="danger" data-logo="${esc(logo.id)}">Delete</button>
   </li>`).join('') || '<li class="empty">No logos added. The ACC crest is always available.</li>';
 }
@@ -173,9 +174,11 @@ $('#logo-file').addEventListener('change', async (event) => {
   const [file] = event.target.files;
   event.target.value = '';
   if (!file) return;
+  const name = prompt('Club name for this logo', file.name.replace(/\.[^.]+$/, ''));
+  if (name === null) return;
   try {
     const data = await shrinkImage(file);
-    await post('saveLogo', { name: file.name.replace(/\.[^.]+$/, ''), data });
+    await post('saveLogo', { name, data });
     logos = await loadLogos();
     renderLogos();
     toast('Logo added');
@@ -185,10 +188,13 @@ $('#logo-file').addEventListener('change', async (event) => {
 });
 
 $('#logo-list').addEventListener('click', async (event) => {
-  const id = event.target.dataset.logo;
-  if (!id || !confirm('Delete this logo? Teams using it will show their initials.')) return;
+  const { logo: id, rename } = event.target.dataset;
+  const name = rename && prompt('Club name for this logo', logos.find((logo) => logo.id === rename).name);
+  if (rename && !name) return;
+  if (id && !confirm('Delete this logo? Teams using it will show their initials.')) return;
+  if (!id && !rename) return;
   try {
-    await post('deleteLogo', { id });
+    await (rename ? post('renameLogo', { id: rename, name }) : post('deleteLogo', { id }));
     logos = await loadLogos();
     renderLogos();
   } catch (error) {

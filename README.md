@@ -87,7 +87,7 @@ Casting from a web page works in Chrome on Android and computers, but not on iPh
 
 ## Logos
 
-**Add logo** on the admin page takes a PNG, JPEG or WebP. The browser shrinks it to 160 pixels and it is saved in the `Logos` tab. The ACC crest is always available, and a team with no logo shows its initials.
+**Add logo** on the admin page takes a PNG, JPEG or WebP and asks for the club name, which is what the logo lists show. **Rename** changes it later. The browser shrinks the image to 160 pixels and it is saved in the `Logos` tab. The ACC crest is always available, and a team with no logo shows its initials.
 
 ## Developing
 

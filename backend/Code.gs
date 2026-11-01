@@ -31,6 +31,7 @@ var ACTIONS = {
   goLive: { role: 'admin', fn: goLive },
   stopLive: { role: 'admin', fn: stopLive },
   saveLogo: { role: 'admin', fn: saveLogo },
+  renameLogo: { role: 'admin', fn: renameLogo },
   deleteLogo: { role: 'admin', fn: deleteLogo },
   saveBonspiel: { role: 'admin', fn: saveBonspiel },
   deleteBonspiel: { role: 'admin', fn: deleteBonspiel },
@@ -292,6 +293,15 @@ function saveLogo(body) {
   var item = { id: Utilities.getUuid().slice(0, 8), name: cleanText(body.name, 40) || 'Logo', data: data };
   appendRow('Logos', item);
   return { id: item.id };
+}
+
+function renameLogo(body) {
+  var row = readTab('Logos').filter(function (logo) { return String(logo.id) === String(body.id); })[0];
+  if (!row) throw new Error('That logo no longer exists');
+  var name = cleanText(body.name, 40);
+  if (!name) throw new Error('Enter a club name');
+  row.name = name;
+  writeRow('Logos', row._row, row);
 }
 
 function deleteLogo(body) {

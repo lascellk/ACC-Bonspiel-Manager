@@ -121,7 +121,12 @@ test('swap hammer and finish a game', () => {
 test('logos must be small images', () => {
   const { api } = withDraw();
   const good = 'data:image/png;base64,AAAA';
-  assert.equal(admin(api, { action: 'saveLogo', name: 'x', data: good }).ok, true);
+  const saved = admin(api, { action: 'saveLogo', name: 'x', data: good });
+  assert.equal(saved.ok, true);
+  assert.equal(admin(api, { action: 'renameLogo', id: saved.id, name: '  Almonte CC  ' }).ok, true);
+  assert.deepEqual(api.get({ action: 'logos' }).logos.map((logo) => [logo.name, logo.data]), [['Almonte CC', good]]);
+  assert.match(admin(api, { action: 'renameLogo', id: saved.id, name: ' ' }).error, /club name/);
+  assert.match(admin(api, { action: 'renameLogo', id: 'nope', name: 'x' }).error, /no longer exists/);
   assert.equal(admin(api, { action: 'saveLogo', name: 'x', data: 'javascript:alert(1)' }).ok, false);
   assert.equal(admin(api, { action: 'saveLogo', name: 'x', data: good + 'A'.repeat(50000) }).ok, false);
   assert.equal(api.get({ action: 'logos' }).logos.length, 1);
