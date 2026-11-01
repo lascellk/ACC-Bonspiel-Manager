@@ -243,6 +243,18 @@ test('a schedule with no scores can be deleted, and its live draw goes with it',
   assert.equal(api.get({ action: 'draws' }).draws[0].games.length, 4);
   assert.match(admin(api, { action: 'deleteSchedule', id }).error, /no schedule/);
 });
+test('a bonspiel also carries the hand-made draws, for the public page', () => {
+  const { api, id, one, score } = withBracket();
+  const game = { sheet: 1, team1: 'Guest', team2: 'Visitors' };
+  const made = admin(api, { action: 'saveDraw', draw: { name: 'One-off', date: '2026-11-07', games: [game] } }).id;
+  const { draws, otherDraws } = api.get({ action: 'bonspiel', id });
+  assert.equal(draws.length, 2);
+  assert.deepEqual(otherDraws.map((draw) => [draw.id, draw.name, draw.date]), [[made, 'One-off', '2026-11-07']]);
+  assert.deepEqual([otherDraws[0].games[0].team1, otherDraws[0].games[0].team2, otherDraws[0].games.length], ['Guest', 'Visitors', 4]);
+  assert.ok(!otherDraws.some((draw) => draw.id === one));
+  score(made, 1, 0);
+  assert.deepEqual(admin(api, { action: 'setFinal', drawId: made, sheet: 1, final: true }).ok, true);
+});
 test('a draw taken off live stays off until it is made live again', () => {
   const { api, one } = withBracket();
   admin(api, { action: 'goLive', id: one });

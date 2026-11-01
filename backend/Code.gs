@@ -484,7 +484,8 @@ function buildBonspiel(id) {
   return {
     bonspiel: toBonspiel(findBonspiel(id)),
     teams: teamsOf(id).map(toTeam),
-    draws: draws.map(function (row) { return toDraw(row, games); })
+    draws: draws.map(function (row) { return toDraw(row, games); }),
+    otherDraws: allDraws().filter(function (draw) { return !draw.bonspielId; })
   };
 }
 

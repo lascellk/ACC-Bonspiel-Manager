@@ -1,5 +1,5 @@
 // HTML pieces shared by the organiser page and the public event page.
-import { totals } from './core.js';
+import { hasTeams, totals } from './core.js';
 import { bracketSections, flatGames, poolStandings, sourceLabel } from './bonspiel.js';
 import { esc, logoHtml } from './view.js';
 
@@ -37,6 +37,17 @@ export function scheduleHtml(draws, liveId) {
     <p>${esc(formatTime(draw.startsAt))}</p>
     <div class="match-list">${draw.games.filter((game) => game.gameId).map((game) => matchCard(game, games, `Sheet ${game.sheet}`)).join('')}</div>
     <div class="draw-actions" data-draw-actions="${esc(draw.id)}"></div>
+  </article>`).join('')}</div>`;
+}
+
+// Draws made by hand on the admin page. They have a date but no start time, and sheets may be empty.
+export function otherDrawsHtml(draws, liveId) {
+  const shown = draws.filter((draw) => draw.games.some(hasTeams));
+  if (!shown.length) return '';
+  return `<h3>Other draws</h3><div class="draw-list">${shown.map((draw) => `<article class="draw-card ${draw.id === liveId ? 'is-live' : ''}">
+    <h3>${esc(draw.name)}${draw.id === liveId ? ' <span class="badge">Live</span>' : ''}</h3>
+    <p>${esc(draw.date)}</p>
+    <div class="match-list">${draw.games.filter(hasTeams).map((game) => matchCard(game, [], `Sheet ${game.sheet}`)).join('')}</div>
   </article>`).join('')}</div>`;
 }
 

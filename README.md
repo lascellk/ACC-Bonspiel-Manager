@@ -49,6 +49,7 @@ Rules to know:
 - **Delete schedule** on the Schedule step removes the schedule and its draws, and keeps the teams.
 - Once any score is entered, the schedule can't be replaced or deleted.
 - On `admin.html`, a hand-made draw can take its teams from a bonspiel: choose it under **Teams from**, then pick each team from the list or type any name. A picked team brings its logo. The draw stays a one-off, so its scores don't count in that bonspiel's standings.
+- Every hand-made draw with at least one team shows under **Other draws** on the Schedule tab of each public event page.
 - On `admin.html`, a bonspiel draw can have its stones, hammer and timer changed, but not its teams, and it can't be deleted there.
 
 ## Setup

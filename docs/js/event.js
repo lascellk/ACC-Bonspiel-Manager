@@ -1,7 +1,7 @@
 // Public event page: schedule, live and final scores, standings, brackets and teams. No PIN.
 import { configured, get } from './api.js';
 import { FORMATS } from './bonspiel.js';
-import { bracketHtml, scheduleHtml, standingsHtml, teamsHtml } from './bonspiel-view.js';
+import { bracketHtml, otherDrawsHtml, scheduleHtml, standingsHtml, teamsHtml } from './bonspiel-view.js';
 import { esc, loadLogos, notConfiguredNotice, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -22,7 +22,7 @@ function body() {
   if (tab === 'Standings') return standingsHtml(data);
   if (tab === 'Bracket') return bracketHtml(data.draws);
   if (tab === 'Teams') return teamsHtml(data.teams);
-  return scheduleHtml(data.draws, liveId);
+  return scheduleHtml(data.draws, liveId) + otherDrawsHtml(data.otherDraws, liveId);
 }
 
 function render() {
@@ -45,7 +45,7 @@ async function refresh(id) {
   try {
     const result = await get('bonspiel', { id });
     $('#offline').hidden = true;
-    const next = JSON.stringify([result.bonspiel, result.teams, result.draws, result.draw?.id]);
+    const next = JSON.stringify([result.bonspiel, result.teams, result.draws, result.otherDraws, result.draw?.id]);
     if (next === shown) return;
     shown = next;
     data = result;
