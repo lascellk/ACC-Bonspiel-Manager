@@ -31,7 +31,7 @@ The four steps on `bonspiel.html`:
 1. **Details:** name, date, format and settings. The formats are pools then playoffs, fixed games ranked on points, and single or double knockout.
 2. **Teams:** add up to 16 teams with their rosters, seeds and logos. **Assign pools** deals the seeded teams out evenly, and you can change any pool by hand.
 3. **Schedule:** enter the first draw time, then generate. The preview isn't saved until you say so. Tap two games to swap them, and the page says if a swap puts a team on two sheets or a game ahead of a result it needs.
-4. **Run:** press **Make live** for the current draw and score it as usual. When the pools end, check the seeds and press **Fill the playoff games**.
+4. **Run:** press **Make live** for the current draw and score it as usual. In a fixed-games event, press **Fill round** after each round. When the pools end, check the seeds and press **Fill the playoff games**.
 
 Rules to know:
 
@@ -42,7 +42,9 @@ Rules to know:
 - Teams rank on points, then head-to-head wins, ties and losses, then point difference. Draw-shot results aren't recorded, so a tie that remains is marked for you to settle in the playoff seeds.
 - A playoff or knockout game can't finish tied. Finishing one puts the winner and loser into their next games.
 - To change the score of a finished playoff or knockout game, reopen it first. Reopening clears the next games, and is refused if one of them has started.
-- With an odd number of teams, games per team must be even.
+- In fixed games, the first round sets the top half of the seeds against the bottom half. Each later round is seeded from the standings once the round before is finished: 1st plays 2nd, 3rd plays 4th and so on, skipping a team already met unless a rematch is the only way. The organiser sees these games first and can change them.
+- With an odd number of teams, games per team must be even. A team sits out each round, and those who have played least go first next round, so a short last round can follow to even up the games.
+- A filled round stays as it is if an earlier score is corrected afterwards, so check the scores before pressing **Fill round**.
 - Double knockout ends with one final between the two bracket winners, with no reset game.
 - Once any score is entered, the schedule can't be replaced.
 - On `admin.html`, a bonspiel draw can have its stones, hammer and timer changed, but not its teams, and it can't be deleted there.

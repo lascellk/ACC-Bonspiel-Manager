@@ -44,7 +44,8 @@ export function roundRobin(teams, prefix = 'p') {
   return games;
 }
 
-// Teams sit in a circle by seed and each plays those a set distance away, so nobody meets twice.
+// Round 1 sets the top half of the seeds against the bottom half. Later rounds are slots of P:<round>:<n>,
+// filled from the standings when the round before ends. An odd team count leaves a team out each round.
 export function fixedGames(teams, gamesPerTeam) {
   const list = bySeed(teams).map((team) => team.id);
   const n = list.length;
@@ -52,18 +53,16 @@ export function fixedGames(teams, gamesPerTeam) {
   if (n % 2 && gamesPerTeam % 2) throw new Error('With an odd number of teams, games per team must be even');
   const half = Math.floor(n / 2);
   const games = [];
-  const pairAt = (distance, count) => {
+  const add = (fields) => games.push(blankGame({ id: `f${games.length + 1}`, phase: 'pool', ...fields }));
+  for (let i = 0; i < half; i++) add({ team1Id: list[i], team2Id: list[i + half], round: 1 });
+  let left = (n * gamesPerTeam) / 2 - half;
+  for (let round = 2; left > 0; round++) {
+    const count = Math.min(half, left);
     for (let i = 0; i < count; i++) {
-      games.push(blankGame({ id: `f${games.length + 1}`, team1Id: list[i], team2Id: list[(i + distance) % n], phase: 'pool', round: 1 }));
+      add({ source1: `P:${round}:${i * 2 + 1}`, source2: `P:${round}:${i * 2 + 2}`, round });
     }
-  };
-  let left = gamesPerTeam;
-  if (left % 2) {
-    pairAt(half, half);
-    left -= 1;
+    left -= count;
   }
-  const top = n % 2 ? half : half - 1;
-  for (let distance = top; left > 0; distance -= 1, left -= 2) pairAt(distance, n);
   return games;
 }
 
@@ -192,10 +191,13 @@ export function buildGames(bonspiel, teams) {
 
 const sourceGame = (source) => (/^[WL]:/.test(source) ? source.slice(2) : '');
 const isSeedSlot = (source) => source.startsWith('S:');
+const isPairing = (source) => source.startsWith('P:');
 
-function dependsOn(game, poolIds) {
+function dependsOn(game, games) {
+  const pool = games.filter((other) => other.phase === 'pool');
   const seeded = isSeedSlot(game.source1) || isSeedSlot(game.source2);
-  return [sourceGame(game.source1), sourceGame(game.source2), ...(seeded ? poolIds : [])].filter(Boolean);
+  const earlier = isPairing(game.source1) ? pool.filter((other) => other.round < game.round) : [];
+  return [sourceGame(game.source1), sourceGame(game.source2), ...(seeded ? pool : earlier).map((other) => other.id)].filter(Boolean);
 }
 
 const gameTeams = (game) => [game.team1Id, game.team2Id].filter(Boolean);
@@ -203,7 +205,6 @@ const gameTeams = (game) => [game.team1Id, game.team2Id].filter(Boolean);
 // Fills draws one at a time from the games that are ready, earliest round first, then whoever has
 // waited longest. Each game then takes the free sheet its teams have used least.
 export function assignDraws(games, sheets = SHEETS) {
-  const poolIds = games.filter((game) => game.phase === 'pool').map((game) => game.id);
   const order = new Map(games.map((game, i) => [game.id, i]));
   const placed = new Map();
   const lastDraw = new Map();
@@ -219,7 +220,7 @@ export function assignDraws(games, sheets = SHEETS) {
   while (remaining.length) {
     const number = draws.length;
     const ready = remaining
-      .filter((game) => dependsOn(game, poolIds).every((id) => placed.has(id) && placed.get(id) < number))
+      .filter((game) => dependsOn(game, games).every((id) => placed.has(id) && placed.get(id) < number))
       .sort((a, b) => a.round - b.round || gamesPlayed(a) - gamesPlayed(b) || waited(a) - waited(b) || order.get(a.id) - order.get(b.id));
     const busy = new Set();
     const chosen = [];
@@ -280,7 +281,7 @@ export function scheduleProblems(draws, nameOf = (id) => id) {
   const problems = [];
   const drawOf = new Map();
   draws.forEach((draw, i) => draw.games.forEach((game) => drawOf.set(game.id, i)));
-  const poolIds = draws.flatMap((draw) => draw.games).filter((game) => game.phase === 'pool').map((game) => game.id);
+  const games = draws.flatMap((draw) => draw.games);
   draws.forEach((draw, i) => {
     const seen = new Set();
     draw.games.forEach((game) => {
@@ -288,7 +289,7 @@ export function scheduleProblems(draws, nameOf = (id) => id) {
         if (seen.has(id)) problems.push(`${nameOf(id)} is on two sheets in ${draw.name}`);
         seen.add(id);
       });
-      if (dependsOn(game, poolIds).some((id) => drawOf.get(id) >= i)) {
+      if (dependsOn(game, games).some((id) => drawOf.get(id) >= i)) {
         problems.push(`${draw.name}, Sheet ${game.sheet} needs the result of a game that comes later`);
       }
     });
@@ -381,6 +382,48 @@ export function playoffSeeds(teams, games, settings, size) {
   return { teamIds: chosen.map((item) => item.team.id), tied: chosen.some((item) => item.unresolved) };
 }
 
+// ----- Seeded rounds
+
+const pairingParts = (source) => source.split(':').map(Number);
+const roundOf = (game) => (isPairing(game.source1) ? pairingParts(game.source1)[1] : 1);
+
+// The first round still waiting for its teams, with its games in slot order, or null.
+export function nextRound(games) {
+  const open = games.filter((game) => isPairing(game.source1) && !game.team1Id);
+  if (!open.length) return null;
+  const round = Math.min(...open.map(roundOf));
+  return {
+    round,
+    games: open.filter((game) => roundOf(game) === round).sort((a, b) => pairingParts(a.source1)[2] - pairingParts(b.source1)[2]),
+    unfinished: games.filter((game) => game.phase === 'pool' && !game.final && roundOf(game) < round).length,
+  };
+}
+
+// Pairs each team with the next one down that it hasn't met, going back a step if that strands a team.
+function pairUp(ids, canMeet) {
+  if (!ids.length) return [];
+  const [first, ...rest] = ids;
+  for (const other of rest) {
+    if (!canMeet(first, other)) continue;
+    const others = pairUp(rest.filter((id) => id !== other), canMeet);
+    if (others) return [first, other, ...others];
+  }
+  return null;
+}
+
+// Team ids for slots 1, 2, 3 and so on, so 1st plays 2nd and 3rd plays 4th. The team with fewer games
+// plays first, which evens up an odd team count. A rematch happens only when there is no other way.
+export function pairRound(teams, games, settings, slots) {
+  const chosen = standings(teams, games, settings)
+    .sort((a, b) => a.played - b.played || a.rank - b.rank)
+    .slice(0, slots)
+    .sort((a, b) => a.rank - b.rank);
+  const met = new Set(games.filter((game) => game.team1Id && game.team2Id).map((game) => [game.team1Id, game.team2Id].sort().join()));
+  const ids = chosen.map((item) => item.team.id);
+  const teamIds = pairUp(ids, (a, b) => !met.has([a, b].sort().join())) || pairUp(ids, () => true);
+  return { teamIds, tied: chosen.some((item) => item.unresolved) };
+}
+
 // ----- Brackets
 
 export const flatGames = (draws) =>
@@ -425,6 +468,7 @@ export function bracketSections(games) {
 
 export function sourceLabel(source, games) {
   if (isSeedSlot(source)) return `Seed ${source.slice(2)}`;
+  if (isPairing(source)) return `Seeded after round ${pairingParts(source)[1] - 1}`;
   const id = sourceGame(source);
   const game = id && games.find((item) => item.gameId === id);
   if (!game) return 'To be decided';

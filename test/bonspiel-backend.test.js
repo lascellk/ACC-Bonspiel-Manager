@@ -192,6 +192,38 @@ test('saved settings are forced into range', () => {
   assert.equal(saved.minutes, 95);
   assert.equal(admin(api, { action: 'saveBonspiel', bonspiel: { name: 'x', format: 'nope' } }).ok, false);
 });
+test('a seeded round fills from the organiser once the round before is finished', () => {
+  const { api, id, teams } = withBonspiel();
+  const pool = (fields) => ({ phase: 'pool', ...fields });
+  const saved = admin(api, { action: 'saveSchedule', id, draws: [
+    { games: [
+      slot('f1', 1, pool({ team1Id: teams[0], team2Id: teams[2] })),
+      slot('f2', 2, pool({ team1Id: teams[1], team2Id: teams[3] })),
+    ] },
+    { games: [
+      slot('f3', 1, pool({ source1: 'P:2:1', source2: 'P:2:2' })),
+      slot('f4', 2, pool({ source1: 'P:2:3', source2: 'P:2:4' })),
+    ] },
+  ] });
+  assert.equal(saved.ok, true, saved.error);
+  const draws = () => api.get({ action: 'bonspiel', id }).draws;
+  const [one, two] = draws().map((draw) => draw.id);
+  const seed = (order, round = 2) => admin(api, { action: 'seedRound', id, round, teams: order });
+  assert.match(scorer(api, { action: 'setFinal', drawId: two, sheet: 1, final: true }).error, /waiting for a team/);
+  assert.match(seed(teams).error, /Finish the earlier rounds/);
+  scorer(api, { action: 'setFinal', drawId: one, sheet: 1, final: true });
+  scorer(api, { action: 'setFinal', drawId: one, sheet: 2, final: true });
+  assert.match(seed(teams, 3).error, /no round to seed/);
+  assert.match(seed([teams[0], teams[0], teams[1], teams[2]]).error, /two games/);
+  assert.match(seed(teams.slice(0, 3)).error, /every game/);
+  assert.match(seed(['nobody', ...teams.slice(1)]).error, /isn't in this bonspiel/);
+  assert.equal(admin(api, { action: 'seedRound', id, round: 2, teams }).ok, true);
+  const [first, second] = draws()[1].games;
+  assert.deepEqual([first.team1, first.team2, first.logo1, second.team1, second.team2], ['A', 'B', 'logo-A', 'C', 'D']);
+  assert.equal(scorer(api, { action: 'setEnd', drawId: two, sheet: 1, index: 0, end: { team: 0, pts: 1 } }).ok, true);
+  assert.match(seed(teams).error, /already started/);
+  assert.match(scorer(api, { action: 'seedRound', id, round: 2, teams }).error, /.+/);
+});
 test('end and score options are saved and forced into range', () => {
   const { api, id } = withBonspiel();
   const options = { trackEnds: true, pointsPerEnd: 3, scorePoints: true, maxEndPoints: 99 };

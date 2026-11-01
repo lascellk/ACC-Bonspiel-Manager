@@ -1,8 +1,8 @@
 // Organiser page: details, teams, schedule, then running the event.
 import { configured, get, post } from './api.js';
 import {
-  assignDraws, assignPools, buildGames, bySeed, DEFAULT_SETTINGS, drawTimes, flatGames, FORMATS, MAX_TEAMS, playoffSeeds,
-  scheduleProblems, SHEETS, sourceLabel, swapGames,
+  assignDraws, assignPools, buildGames, bySeed, DEFAULT_SETTINGS, drawTimes, flatGames, FORMATS, MAX_TEAMS, nextRound, pairRound,
+  playoffSeeds, scheduleProblems, SHEETS, sourceLabel, swapGames,
 } from './bonspiel.js';
 import { bracketHtml, scheduleHtml, standingsHtml } from './bonspiel-view.js';
 import { esc, loadLogos, logoHtml, logoOptions, notConfiguredNotice, requirePin, toast } from './view.js';
@@ -265,6 +265,27 @@ function saveSchedule() {
 
 // ----- 4. Run
 
+function teamSelect(name, chosen) {
+  return `<select name="${name}">${data.teams.map((team) => `<option value="${esc(team.id)}" ${team.id === chosen ? 'selected' : ''}>${esc(team.name)}</option>`).join('')}</select>`;
+}
+
+function roundPanel() {
+  const { bonspiel, teams, draws } = data;
+  const games = flatGames(draws);
+  const next = nextRound(games);
+  if (!next) return '';
+  const { round, unfinished } = next;
+  if (unfinished) return `<section class="panel"><h2>Round ${round}</h2><p class="note">${unfinished} ${unfinished === 1 ? 'game' : 'games'} to finish before seeding round ${round}.</p></section>`;
+  const { teamIds, tied } = pairRound(teams, games, bonspiel.settings, next.games.length * 2);
+  return `<form id="round-seeding" class="panel" data-round="${round}">
+    <h2>Seed round ${round}</h2>
+    ${tied ? '<p class="note">Some teams are still tied. Change the games below if a draw-shot result decides their order.</p>' : ''}
+    <div class="seed-list">${next.games.map((game, i) => `<label>${esc(game.draw.name)}, Sheet ${game.sheet}${teamSelect('team', teamIds[i * 2])}</label>
+      <label>against${teamSelect('team', teamIds[i * 2 + 1])}</label>`).join('')}</div>
+    <button type="submit" class="primary">Fill round ${round}</button>
+  </form>`;
+}
+
 function seedingPanel() {
   const { bonspiel, teams, draws } = data;
   const games = flatGames(draws);
@@ -278,16 +299,14 @@ function seedingPanel() {
   return `<form id="seeding" class="panel">
     <h2>Seed the playoffs</h2>
     ${tied ? '<p class="note">Some teams are still tied. Enter the draw-shot result by choosing their order below.</p>' : ''}
-    <div class="seed-list">${teamIds.map((chosen, i) => `<label>Seed ${i + 1}
-      <select name="seed">${teams.map((team) => `<option value="${esc(team.id)}" ${team.id === chosen ? 'selected' : ''}>${esc(team.name)}</option>`).join('')}</select>
-    </label>`).join('')}</div>
+    <div class="seed-list">${teamIds.map((chosen, i) => `<label>Seed ${i + 1}${teamSelect('seed', chosen)}</label>`).join('')}</div>
     <button type="submit" class="primary">Fill the playoff games</button>
   </form>`;
 }
 
 function renderRun() {
   const hasStandings = ['pools', 'fixed'].includes(data.bonspiel.format);
-  $('#content').innerHTML = `${seedingPanel()}
+  $('#content').innerHTML = `${roundPanel() || seedingPanel()}
     <section class="panel"><h2>Draws</h2>${scheduleHtml(data.draws, liveId)}</section>
     ${hasStandings ? `<section class="panel"><h2>Standings</h2>${standingsHtml(data)}</section>` : ''}
     <section class="panel"><h2>Bracket</h2>${bracketHtml(data.draws)}</section>`;
@@ -319,6 +338,11 @@ $('#content').addEventListener('submit', (event) => {
   if (event.target.id === 'seeding') {
     const seeds = new FormData(event.target).getAll('seed');
     run(() => post('seedPlayoffs', { id: data.bonspiel.id, seeds }), 'Playoff games filled');
+  }
+  if (event.target.id === 'round-seeding') {
+    const teams = new FormData(event.target).getAll('team');
+    const round = Number(event.target.dataset.round);
+    run(() => post('seedRound', { id: data.bonspiel.id, round, teams }), `Round ${round} filled`);
   }
 });
 

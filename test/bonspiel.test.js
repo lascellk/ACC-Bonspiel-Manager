@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  assignDraws, assignPools, buildGames, doubleKnockout, drawTimes, fixedGames, playoffGames, playoffSeeds, roundRobin,
-  scheduleProblems, singleKnockout, standings, swapGames, SHEETS,
+  assignDraws, assignPools, buildGames, doubleKnockout, drawTimes, fixedGames, nextRound, pairRound, playoffGames, playoffSeeds,
+  roundRobin, scheduleProblems, singleKnockout, sourceLabel, standings, swapGames, SHEETS,
 } from '../docs/js/bonspiel.js';
 
 const SIZES = [4, 7, 8, 12, 15, 16];
@@ -49,15 +49,32 @@ for (const n of SIZES) {
     assertSchedule(games);
   });
 
-  test(`fixed games at ${n} teams give each team its count with no rematch`, () => {
+  test(`fixed games at ${n} teams, seeded each round, give each team its count with no rematch`, () => {
     const perTeam = n < 5 ? 2 : 4;
-    const games = fixedGames(makeTeams(n), perTeam);
+    const teams = makeTeams(n);
+    const games = assertSchedule(fixedGames(teams, perTeam)).flatMap((draw) => draw.games).map((game) => ({ ...game, final: false, ends: [] }));
     assertValidSlots(games);
+    assert.equal(games.length, (n * perTeam) / 2);
+    const play = (round) => games.filter((game) => game.round === round).forEach((game) => {
+      // The better seed wins, so the standings separate the teams.
+      const better = Number(game.team1Id.slice(1)) < Number(game.team2Id.slice(1)) ? 0 : 1;
+      Object.assign(game, { final: true, ends: [{ team: better, pts: 2 }] });
+    });
+    play(1);
+    for (let next = nextRound(games); next; next = nextRound(games)) {
+      assert.equal(next.unfinished, 0);
+      const { teamIds } = pairRound(teams, games, settings, next.games.length * 2);
+      assert.equal(new Set(teamIds).size, next.games.length * 2);
+      next.games.forEach((game, i) => {
+        game.team1Id = teamIds[i * 2];
+        game.team2Id = teamIds[i * 2 + 1];
+      });
+      play(next.round);
+    }
     const count = countGames(games);
     assert.equal(Object.keys(count).length, n);
-    assert.ok(Object.values(count).every((c) => c === perTeam));
+    assert.ok(Object.values(count).every((c) => c === perTeam), JSON.stringify(count));
     assert.equal(new Set(games.map((g) => [g.team1Id, g.team2Id].sort().join())).size, games.length);
-    assertSchedule(games);
   });
 
   test(`single knockout at ${n} teams gives byes to the top seeds`, () => {
@@ -127,10 +144,40 @@ test('an odd team count with odd games per team is refused', () => {
 test('pools are dealt in a snake', () => {
   assert.deepEqual(assignPools(makeTeams(8), 2).map((t) => t.pool).join(''), 'ABBAABBA');
 });
-test('a 16-team schedule stays compact and spreads the sheets', () => {
+test('only the first fixed round has teams, and each round waits for the one before', () => {
+  const games = fixedGames(makeTeams(8), 3);
+  assert.deepEqual(games.slice(0, 4).map((g) => [g.team1Id, g.team2Id]), [['t1', 't5'], ['t2', 't6'], ['t3', 't7'], ['t4', 't8']]);
+  assert.ok(games.slice(4).every((g) => !g.team1Id && !g.team2Id));
+  assert.deepEqual(games.slice(4, 6).map((g) => [g.source1, g.source2]), [['P:2:1', 'P:2:2'], ['P:2:3', 'P:2:4']]);
+  assert.equal(sourceLabel('P:3:1', games), 'Seeded after round 2');
+  assert.deepEqual(assertSchedule(games).map((d) => d.games.length), [4, 4, 4]);
+  assert.equal(nextRound(games.map((g) => ({ ...g, final: false }))).unfinished, 4);
+});
+test('a swap that puts a seeded round before the round it needs is reported', () => {
+  const draws = assignDraws(fixedGames(makeTeams(8), 2));
+  assert.equal(scheduleProblems(swapGames(draws, { draw: 0, sheet: 1 }, { draw: 1, sheet: 1 })).length > 0, true);
+});
+test('seeded rounds pair by rank, and skip a team already met', () => {
+  const teams = makeTeams(4);
+  // Round 1 was t1 v t3 and t2 v t4, won by t1 and t2. They meet next, then t4 and t3 on difference.
+  const first = [played('t1', 't3', 5, 1), played('t2', 't4', 4, 1)];
+  assert.deepEqual(pairRound(teams, first, settings, 4).teamIds, ['t1', 't2', 't4', 't3']);
+  // The ranking is t1, t3, t4, t2. Only t1 v t3 is new at the top, and t1 v t2 has been played.
+  const rematch = [played('t1', 't4', 5, 4), played('t3', 't2', 3, 2)];
+  assert.deepEqual(pairRound(teams, rematch, settings, 4).teamIds.slice(0, 2), ['t1', 't3']);
+  // 1st and 2nd have met, so 1st plays 3rd.
+  const met = [played('t1', 't2', 5, 1), played('t3', 't4', 2, 1)];
+  assert.deepEqual(pairRound(teams, met, settings, 4).teamIds, ['t1', 't3', 't4', 't2']);
+  // Only a rematch is left, so it is allowed.
+  assert.deepEqual(new Set(pairRound(makeTeams(2), [played('t1', 't2', 5, 1)], settings, 2).teamIds), new Set(['t1', 't2']));
+});
+test('a team that sat out plays next', () => {
+  const games = [played('t1', 't2', 5, 1)];
+  assert.ok(pairRound(makeTeams(3), games, settings, 2).teamIds.includes('t3'));
+});
+test('a round-robin schedule spreads the sheets', () => {
   const teams = makeTeams(16);
-  const draws = assertSchedule(fixedGames(teams, 4));
-  assert.ok(draws.length <= 12, `${draws.length} draws`);
+  const draws = assertSchedule(roundRobin(teams));
   teams.forEach((team) => {
     const sheets = draws.flatMap((d) => d.games.filter((g) => g.team1Id === team.id || g.team2Id === team.id).map((g) => g.sheet));
     assert.ok(new Set(sheets).size >= 2, `${team.id} only used ${sheets}`);

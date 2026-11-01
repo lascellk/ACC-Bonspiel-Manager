@@ -37,7 +37,8 @@ var ACTIONS = {
   deleteTeam: { role: 'admin', fn: deleteTeam },
   saveSeeding: { role: 'admin', fn: saveSeeding },
   saveSchedule: { role: 'admin', fn: saveSchedule },
-  seedPlayoffs: { role: 'admin', fn: seedPlayoffs }
+  seedPlayoffs: { role: 'admin', fn: seedPlayoffs },
+  seedRound: { role: 'admin', fn: seedRound }
 };
 
 // Run once from the editor to create the tabs.
@@ -349,20 +350,23 @@ function setFinal(body) {
   var row = findGame(body.drawId, body.sheet);
   var final = body.final === true;
   var wasFinal = String(row.final) === 'true';
-  if (final && isElimination(row)) {
-    if (!hasBothTeams(row)) throw new Error('This game is still waiting for a team');
-    if (winnerSlot(row) === 0) throw new Error('This game can\'t finish tied. Play an extra end.');
-  }
+  if (final && (isElimination(row) || pairingOf(row)) && !hasBothTeams(row)) throw new Error('This game is still waiting for a team');
+  if (final && isElimination(row) && winnerSlot(row) === 0) throw new Error('This game can\'t finish tied. Play an extra end.');
   if (!final && wasFinal) clearLaterSlots(row);
   row.final = final;
   writeRow('Games', row._row, row);
   if (final && isElimination(row)) fillLaterSlots(row);
 }
 
-// ----- Filling later games. A source is W:<gameId>, L:<gameId> or S:<seed>.
+// ----- Filling later games. A source is W:<gameId>, L:<gameId>, S:<seed> or P:<round>:<slot>.
 
 function isElimination(row) {
   return row.phase === 'playoff' || row.phase === 'knockout';
+}
+
+// The [text, round, slot] of a seeded-round source, or null for any other game.
+function pairingOf(row, slot) {
+  return /^P:(\d+):(\d+)$/.exec(String(row['source' + (slot || 1)]));
 }
 
 function hasBothTeams(row) {
@@ -602,8 +606,8 @@ function saveSchedule(body) {
   var qualifySource = function (source) {
     var text = cleanText(source, 24);
     if (!text) return '';
-    if (!/^(W|L|S):.+$/.test(text)) throw new Error('A game has a bad source');
-    return text.charAt(0) === 'S' ? text : text.slice(0, 2) + qualify(text.slice(2));
+    if (!/^(W|L|S|P):.+$/.test(text)) throw new Error('A game has a bad source');
+    return /^[SP]/.test(text) ? text : text.slice(0, 2) + qualify(text.slice(2));
   };
 
   var drawRows = [];
@@ -674,4 +678,31 @@ function seedPlayoffs(body) {
   });
   row.status = 'playoffs';
   writeRow('Bonspiels', row._row, row);
+}
+
+// body.teams: team ids for slots 1, 2, 3 and so on. Fills every game slot with a source of P:<round>:<slot>.
+function seedRound(body) {
+  findBonspiel(body.id);
+  var round = Number(body.round);
+  var teams = teamsOf(body.id);
+  var games = gamesOf(drawsOf(body.id));
+  var roundOf = function (game) { return pairingOf(game) ? Number(pairingOf(game)[1]) : 1; };
+  var slots = games.filter(function (game) { return pairingOf(game) && roundOf(game) === round; });
+  if (!slots.length) throw new Error('This bonspiel has no round to seed');
+  if (games.some(function (game) { return game.phase === 'pool' && roundOf(game) < round && String(game.final) !== 'true'; })) throw new Error('Finish the earlier rounds first');
+  if (slots.some(hasStarted)) throw new Error('This round has already started');
+  var picked = (body.teams || []).map(function (id) {
+    var team = teams.filter(function (item) { return String(item.id) === String(id); })[0];
+    if (!team) throw new Error('A team isn\'t in this bonspiel');
+    return team;
+  });
+  if (picked.some(function (team, i) { return picked.indexOf(team) !== i; })) throw new Error('A team is in two games');
+  slots.forEach(function (game) {
+    [1, 2].forEach(function (slot) {
+      var team = picked[Number(pairingOf(game, slot)[2]) - 1];
+      if (!team) throw new Error('Choose a team for every game');
+      putTeam(game, slot, team);
+    });
+    writeRow('Games', game._row, game);
+  });
 }
