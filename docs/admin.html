@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14284b">
+  <title>Scoreboard Admin</title>
+  <link rel="icon" href="assets/crest.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="app">
+  <header class="top">
+    <img src="assets/crest.png" alt="Almonte Curling Club" width="40" height="40">
+    <h1>Scoreboard admin</h1>
+    <button id="cast-button" class="cast-button" type="button" aria-label="Cast to TV">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M1 18v3h3a3 3 0 0 0-3-3zm0-4v2a5 5 0 0 1 5 5h2a7 7 0 0 0-7-7zm0-4v2a9 9 0 0 1 9 9h2A11 11 0 0 0 1 10zm20-7H3a2 2 0 0 0-2 2v3h2V5h18v14h-7v2h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>
+    </button>
+    <a class="top-link" href="bonspiel.html">Bonspiels</a>
+    <a class="top-link" href="tv.html" target="_blank" rel="noopener">TV</a>
+    <a class="top-link" href="index.html">Scoring</a>
+  </header>
+  <main class="admin">
+    <section id="timer-panel" class="panel" hidden>
+      <div class="panel-head">
+        <div><h2>Timer</h2><p id="timer-draw"></p></div>
+        <span id="admin-clock" class="clock">--:--</span>
+      </div>
+      <div class="button-row">
+        <button type="button" data-minutes="-5">−5 min</button>
+        <button type="button" data-minutes="-1">−1 min</button>
+        <button type="button" data-minutes="1">+1 min</button>
+        <button type="button" data-minutes="5">+5 min</button>
+        <button type="button" class="danger" data-op="reset">Reset</button>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Draws</h2>
+        <button id="new-draw" type="button" class="primary">New draw</button>
+      </div>
+      <div id="draw-list" class="draw-list"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Logos</h2>
+        <label class="file-button">Add logo<input id="logo-file" type="file" accept="image/png,image/jpeg,image/webp"></label>
+      </div>
+      <ul id="logo-list" class="logo-list"></ul>
+    </section>
+  </main>
+  <dialog id="draw-dialog" class="draw-dialog"></dialog>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

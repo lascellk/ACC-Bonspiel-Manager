@@ -1,0 +1,4 @@
+node_modules/
+.clasprc.json
+Reference/
+.claude/settings.local.json

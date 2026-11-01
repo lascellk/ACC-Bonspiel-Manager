@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14284b">
+  <title>ACC Scoreboard</title>
+  <link rel="icon" href="assets/crest.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="app">
+  <header class="top">
+    <img src="assets/crest.png" alt="Almonte Curling Club" width="40" height="40">
+    <h1 id="draw-name">Loading…</h1>
+    <button id="cast-button" class="cast-button" type="button" aria-label="Cast to TV">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M1 18v3h3a3 3 0 0 0-3-3zm0-4v2a5 5 0 0 1 5 5h2a7 7 0 0 0-7-7zm0-4v2a9 9 0 0 1 9 9h2A11 11 0 0 0 1 10zm20-7H3a2 2 0 0 0-2 2v3h2V5h18v14h-7v2h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>
+    </button>
+    <a class="top-link" href="tv.html" target="_blank" rel="noopener">TV</a>
+    <a class="top-link" href="admin.html">Admin</a>
+  </header>
+  <div id="timer-bar" class="timer-bar" hidden>
+    <span id="clock" class="clock">--:--</span>
+    <button id="timer-button" type="button" class="primary" hidden>Start draw</button>
+  </div>
+  <p id="offline" class="offline" hidden>Can't reach the scoreboard. Retrying…</p>
+  <main id="sheets" class="sheets"></main>
+  <dialog id="end-dialog" class="end-dialog"></dialog>
+  <script type="module" src="js/score.js"></script>
+</body>
+</html>

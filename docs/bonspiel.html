@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14284b">
+  <title>Bonspiel Organiser</title>
+  <link rel="icon" href="assets/crest.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="app">
+  <header class="top">
+    <img src="assets/crest.png" alt="Almonte Curling Club" width="40" height="40">
+    <h1 id="page-title">Bonspiels</h1>
+    <a id="event-link" class="top-link" href="event.html" target="_blank" rel="noopener" hidden>Public page</a>
+    <a class="top-link" href="admin.html">Admin</a>
+    <a class="top-link" href="index.html">Scoring</a>
+  </header>
+  <nav id="steps" class="steps" aria-label="Steps" hidden></nav>
+  <main id="content" class="admin"></main>
+  <dialog id="team-dialog" class="draw-dialog"></dialog>
+  <script type="module" src="js/bonspiel-admin.js"></script>
+</body>
+</html>
