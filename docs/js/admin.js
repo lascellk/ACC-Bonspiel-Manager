@@ -254,6 +254,7 @@ async function start() {
   logos = await loadLogos();
   renderLogos();
   await refresh();
+  $('#new-draw').disabled = false; // The form needs the bonspiels for Teams from.
   watch((next) => {
     live = next;
     renderLive();
