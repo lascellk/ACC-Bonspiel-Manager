@@ -16,7 +16,7 @@ let sourceTeams = []; // Teams of the bonspiel chosen in the draw editor.
 
 const blankGame = (sheet) => ({ sheet, team1: '', team2: '', logo1: '', logo2: '', stone: 'red', hammer: 0 });
 const blankDraw = () => ({
-  id: '', name: `Draw ${draws.length + 1}`, date: new Date().toLocaleDateString('en-CA'), ends: 8, minutes: 95, showTimer: true,
+  id: '', name: `Draw ${draws.length + 1}`, date: new Date().toLocaleDateString('en-CA'), startsAt: '', teamsFrom: '', ends: 8, minutes: 95, showTimer: true,
   games: [1, 2, 3, 4].map(blankGame),
 });
 
@@ -32,11 +32,14 @@ function matchup(game) {
   return game.team1 || game.team2 ? `${esc(game.team1 || 'TBD')} v ${esc(game.team2 || 'TBD')}` : '—';
 }
 
+const bonspielName = (id) => bonspiels.find((item) => item.id === id)?.name;
+
 function renderDraws() {
   $('#draw-list').innerHTML = draws.length ? draws.map((draw) => `<article class="draw-card ${draw.id === liveId ? 'is-live' : ''}">
     <header>
       <div><h3>${esc(draw.name)}${draw.id === liveId ? ' <span class="badge">Live</span>' : ''}</h3>
-      <p>${esc(draw.date)} · ${draw.ends} ends · ${draw.minutes} min${draw.showTimer ? '' : ' (timer hidden)'}</p></div>
+      <p>${esc(draw.startsAt.replace('T', ' ') || draw.date)} · ${draw.ends} ends · ${draw.minutes} min${draw.showTimer ? '' : ' (timer hidden)'}</p>
+      ${bonspielName(draw.teamsFrom) ? `<p>${esc(bonspielName(draw.teamsFrom))}</p>` : ''}</div>
     </header>
     <ol>${draw.games.map((game) => `<li>${matchup(game)}</li>`).join('')}</ol>
     <footer>
@@ -75,7 +78,7 @@ function teamSourceField(draw) {
   if (draw.bonspielId || !bonspiels.length) return '';
   return `<label class="grow">Teams from <select name="teamSource">
     <option value="">No bonspiel</option>
-    ${bonspiels.map((item) => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join('')}
+    ${bonspiels.map((item) => `<option value="${esc(item.id)}" ${item.id === draw.teamsFrom ? 'selected' : ''}>${esc(item.name)}</option>`).join('')}
   </select></label>`;
 }
 
@@ -93,6 +96,7 @@ function openEditor(draw) {
     <div class="draw-fields">
       <label class="grow">Draw name <input name="name" value="${esc(draw.name)}" maxlength="60" required></label>
       <label>Date <input type="date" name="date" value="${esc(draw.date)}"></label>
+      <label>Start time <input type="time" name="startTime" value="${esc(draw.startsAt.slice(11))}"></label>
       <label>Ends <input type="number" name="ends" min="1" max="12" value="${draw.ends}" required></label>
       <label>Timer (minutes) <input type="number" name="minutes" min="1" max="600" value="${draw.minutes}" required></label>
       <label class="check"><input type="checkbox" name="showTimer" ${draw.showTimer ? 'checked' : ''}> Show timer</label>
@@ -103,14 +107,19 @@ function openEditor(draw) {
     <footer><button type="submit" class="primary">Save draw</button></footer>
   </form>`;
   dialog.showModal();
+  if (bonspielName(draw.teamsFrom)) chooseTeamSource(draw.teamsFrom).catch((error) => toast(error.message));
 }
 
 function readEditor(form) {
   const data = new FormData(form);
+  const date = data.get('date');
+  const time = data.get('startTime');
   return {
     id: editing.id,
     name: data.get('name'),
-    date: data.get('date'),
+    date,
+    startsAt: date && time ? `${date}T${time}` : '',
+    teamsFrom: data.get('teamSource') || '',
     ends: Number(data.get('ends')),
     minutes: Number(data.get('minutes')),
     showTimer: data.has('showTimer'),

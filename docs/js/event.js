@@ -1,7 +1,8 @@
 // Public event page: schedule, live and final scores, standings, brackets and teams. No PIN.
 import { configured, get } from './api.js';
 import { FORMATS } from './bonspiel.js';
-import { bracketHtml, otherDrawsHtml, scheduleHtml, standingsHtml, teamsHtml } from './bonspiel-view.js';
+import { bracketHtml, scheduleHtml, standingsHtml, teamsHtml } from './bonspiel-view.js';
+import { hasTeams } from './core.js';
 import { esc, loadLogos, notConfiguredNotice, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -18,11 +19,18 @@ function tabs() {
   return ['Schedule', ...(usesStandings() ? ['Standings'] : []), ...(usesBracket() ? ['Bracket'] : []), 'Teams'];
 }
 
+// The saved schedule if there is one, otherwise the hand-made draws linked to this bonspiel.
+function scheduleDraws() {
+  if (data.draws.length) return data.draws;
+  const when = (draw) => draw.startsAt || draw.date;
+  return data.linkedDraws.filter((draw) => draw.games.some(hasTeams)).sort((a, b) => when(a).localeCompare(when(b)));
+}
+
 function body() {
   if (tab === 'Standings') return standingsHtml(data);
   if (tab === 'Bracket') return bracketHtml(data.draws);
   if (tab === 'Teams') return teamsHtml(data.teams);
-  return scheduleHtml(data.draws, liveId) + otherDrawsHtml(data.otherDraws, liveId);
+  return scheduleHtml(scheduleDraws(), liveId);
 }
 
 function render() {
@@ -45,7 +53,7 @@ async function refresh(id) {
   try {
     const result = await get('bonspiel', { id });
     $('#offline').hidden = true;
-    const next = JSON.stringify([result.bonspiel, result.teams, result.draws, result.otherDraws, result.draw?.id]);
+    const next = JSON.stringify([result.bonspiel, result.teams, result.draws, result.linkedDraws, result.draw?.id]);
     if (next === shown) return;
     shown = next;
     data = result;

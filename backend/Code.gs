@@ -4,7 +4,7 @@
 // PINs live in Script Properties: ADMIN_PIN (draw setup) and SCORE_PIN (score entry).
 
 var TABS = {
-  Draws: ['id', 'name', 'date', 'ends', 'minutes', 'startedAt', 'leftMs', 'showTimer', 'bonspielId', 'startsAt'],
+  Draws: ['id', 'name', 'date', 'ends', 'minutes', 'startedAt', 'leftMs', 'showTimer', 'bonspielId', 'startsAt', 'teamsFrom'],
   Games: ['drawId', 'sheet', 'team1', 'logo1', 'team2', 'logo2', 'stone1', 'hammer', 'ends', 'final',
     'gameId', 'team1Id', 'team2Id', 'phase', 'bracket', 'source1', 'source2'],
   Logos: ['id', 'name', 'data'],
@@ -179,7 +179,7 @@ function toDraw(row, games) {
     id: String(row.id), name: String(row.name), date: String(row.date), ends: Number(row.ends),
     minutes: Number(row.minutes), startedAt: Number(row.startedAt), leftMs: Number(row.leftMs),
     showTimer: String(row.showTimer) !== 'false', // Draws saved before this setting existed are blank.
-    bonspielId: String(row.bonspielId), startsAt: String(row.startsAt),
+    bonspielId: String(row.bonspielId), startsAt: String(row.startsAt), teamsFrom: String(row.teamsFrom),
     games: games.filter(function (game) { return String(game.drawId) === String(row.id); })
       .map(toGame).sort(function (a, b) { return a.sheet - b.sheet; })
   };
@@ -199,7 +199,8 @@ function buildLive() {
   var row = readTab('Draws').filter(function (draw) { return String(draw.id) === id; })[0];
   if (!row) return null;
   var draw = toDraw(row, readTab('Games'));
-  var bonspiel = draw.bonspielId && readTab('Bonspiels').filter(function (item) { return String(item.id) === draw.bonspielId; })[0];
+  var bonspielId = draw.bonspielId || draw.teamsFrom;
+  var bonspiel = bonspielId && readTab('Bonspiels').filter(function (item) { return String(item.id) === bonspielId; })[0];
   if (bonspiel) draw.bonspielName = String(bonspiel.name);
   return draw;
 }
@@ -248,6 +249,10 @@ function saveDraw(body) {
   item.ends = Math.min(Math.max(Number(draw.ends) || 8, 1), 12);
   item.minutes = minutes;
   item.showTimer = draw.showTimer !== false;
+  if (draw.startsAt !== undefined) item.startsAt = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(draw.startsAt) ? draw.startsAt : '';
+  // A scheduled draw already belongs to its bonspiel, so only a hand-made draw can be linked to one.
+  item.teamsFrom = item.bonspielId ? '' : cleanText(draw.teamsFrom, 8);
+  if (item.teamsFrom) findBonspiel(item.teamsFrom);
   if (row) writeRow('Draws', row._row, item); else appendRow('Draws', item);
 
   var existing = readTab('Games').filter(function (game) { return String(game.drawId) === String(item.id); });
@@ -485,7 +490,7 @@ function buildBonspiel(id) {
     bonspiel: toBonspiel(findBonspiel(id)),
     teams: teamsOf(id).map(toTeam),
     draws: draws.map(function (row) { return toDraw(row, games); }),
-    otherDraws: allDraws().filter(function (draw) { return !draw.bonspielId; })
+    linkedDraws: allDraws().filter(function (draw) { return draw.teamsFrom === String(id); })
   };
 }
 
