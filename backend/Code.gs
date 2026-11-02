@@ -524,7 +524,7 @@ function cachedBonspiel(id) {
 }
 
 function expireBonspiels() {
-  CacheService.getScriptCache().put(CACHE_VERSION, String(Date.now()), 21600);
+  CacheService.getScriptCache().put(CACHE_VERSION, Date.now() + '-' + Math.random(), 21600);
 }
 
 // ----- Bonspiel admin actions
