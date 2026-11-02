@@ -33,6 +33,27 @@ export const teamName = (game, team) => (team === 0 ? game.team1 : game.team2) |
 export const teamLogo = (game, team) => (team === 0 ? game.logo1 : game.logo2);
 export const hasTeams = (game) => Boolean(game.team1 || game.team2);
 
+// The wheels for choosing hammer and colour. The slice a wheel stops on is the team it picks, and the colour that team gets.
+export function wheelSlices(useColour) {
+  const pairs = [[0, 'red'], [1, 'blue'], [1, 'red'], [0, 'blue']];
+  const slices = [...pairs, ...pairs];
+  return slices.map(([team, colour], index) => (useColour ? { team, colour } : { team: index % 2, colour: '' }));
+}
+
+// Degrees to turn a wheel so the slice for this result sits under the pointer at the top.
+export function wheelStop(slices, game, round) {
+  const matches = slices.flatMap((slice, index) => (slice.team === game.pick && slice.colour === game.colour ? [index] : []));
+  const index = matches[(round + game.sheet) % matches.length];
+  return 360 - ((index + 0.5) * 360) / slices.length;
+}
+
+export const wheelSeconds = (sheet) => 5 + sheet;
+
+export function spinResult(spin, game) {
+  const name = teamName(game, game.pick);
+  return [spin.hammer && `${name} has the hammer`, spin.colour && `${name} is ${game.colour}`].filter(Boolean).join(' · ');
+}
+
 export const drawTitle = (draw) => (draw.bonspielName ? `${draw.bonspielName} · ${draw.name}` : draw.name);
 
 // Extra ends widen the line score past the scheduled number.

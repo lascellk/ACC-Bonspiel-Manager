@@ -19,6 +19,7 @@ var MAX_TEAMS = 16;
 var SHEETS = 4;
 var MAX_LOGO_CHARS = 45000; // A Sheet cell holds 50,000 characters.
 var MAX_PIN_FAILURES = 10;
+var SPIN_MAX_MS = 30 * 60000; // The wheels leave the TV by themselves if the admin page goes away.
 
 var ACTIONS = {
   login: { role: 'score', fn: function () { return {}; }, noLock: true },
@@ -31,6 +32,9 @@ var ACTIONS = {
   goLive: { role: 'admin', fn: goLive },
   stopLive: { role: 'admin', fn: stopLive },
   setTvView: { role: 'admin', fn: setTvView },
+  openSpin: { role: 'admin', fn: openSpin },
+  spinWheels: { role: 'admin', fn: spinWheels },
+  closeSpin: { role: 'admin', fn: closeSpin },
   saveLogo: { role: 'admin', fn: saveLogo },
   renameLogo: { role: 'admin', fn: renameLogo },
   deleteLogo: { role: 'admin', fn: deleteLogo },
@@ -94,6 +98,7 @@ function respond(work) {
     var live = liveState();
     out.draw = live.draw;
     out.tv = live.tv || '';
+    out.spin = live.spin || null;
   } catch (err) {
     out = { ok: false, error: err.message };
   }
@@ -214,7 +219,7 @@ function liveState() {
 }
 
 function cacheLive(draw) {
-  var state = { draw: draw, tv: tvBonspiel() };
+  var state = { draw: draw, tv: tvBonspiel(), spin: tvSpin() };
   CacheService.getScriptCache().put(CACHE_KEY, JSON.stringify(state), 60);
   return state;
 }
@@ -305,6 +310,66 @@ function setTvView(body) {
     return;
   }
   props.setProperty('TV_BONSPIEL', String(findBonspiel(body.bonspielId).id));
+}
+
+// The wheels on the TV, or null. They can be for any draw, not only the live one, so they carry their own team names.
+function tvSpin() {
+  var saved = PropertiesService.getScriptProperties().getProperty('TV_SPIN');
+  var spin = saved ? JSON.parse(saved) : null;
+  return spin && Date.now() - spin.at < SPIN_MAX_MS ? spin : null;
+}
+
+function saveSpin(spin) {
+  spin.at = Date.now();
+  PropertiesService.getScriptProperties().setProperty('TV_SPIN', JSON.stringify(spin));
+}
+
+// A game that has started keeps its hammer and stones.
+function canSpin(row) {
+  return Boolean(row.team1 && row.team2) && !JSON.parse(row.ends || '[]').length && String(row.final) !== 'true';
+}
+
+function drawGames(id) {
+  return readTab('Games').filter(function (game) { return String(game.drawId) === String(id); })
+    .sort(function (a, b) { return Number(a.sheet) - Number(b.sheet); });
+}
+
+function openSpin(body) {
+  var draw = findDraw(body.id);
+  var games = drawGames(draw.id).map(function (row) {
+    return { sheet: Number(row.sheet), team1: String(row.team1), team2: String(row.team2), open: canSpin(row) };
+  });
+  if (!games.some(function (game) { return game.open; })) throw new Error('No sheet has two teams and no scores yet');
+  saveSpin({ drawId: String(draw.id), name: String(draw.name), hammer: body.hammer === true, colour: body.colour === true, round: 0, games: games });
+}
+
+// The backend decides, so every screen shows the same result and it is recorded before the wheels stop.
+// pick is the team the wheel lands on, and colour is the colour that team gets.
+function spinWheels() {
+  var spin = tvSpin();
+  if (!spin) throw new Error('The wheels are no longer on the TV');
+  if (!spin.hammer && !spin.colour) throw new Error('Choose hammer, colour or both');
+  var rows = drawGames(spin.drawId);
+  spin.games.forEach(function (game) {
+    var row = rows.filter(function (item) { return Number(item.sheet) === game.sheet; })[0];
+    game.open = Boolean(row) && canSpin(row);
+    if (!game.open) return;
+    game.pick = Math.random() < 0.5 ? 0 : 1;
+    game.colour = '';
+    if (spin.colour) {
+      game.colour = Math.random() < 0.5 ? 'red' : 'blue';
+      game.stone = game.pick === 0 ? game.colour : game.colour === 'red' ? 'blue' : 'red';
+      row.stone1 = game.stone;
+    }
+    if (spin.hammer) row.hammer = game.pick;
+    writeRow('Games', row._row, row);
+  });
+  spin.round += 1;
+  saveSpin(spin);
+}
+
+function closeSpin() {
+  PropertiesService.getScriptProperties().deleteProperty('TV_SPIN');
 }
 
 function saveLogo(body) {

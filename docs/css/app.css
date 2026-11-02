@@ -268,6 +268,23 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 .choice label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-size: 15px; color: var(--ink); }
 .draw-dialog footer { position: sticky; bottom: 0; padding-top: 4px; background: var(--card); }
 .draw-dialog footer button { width: 100%; }
+.draw-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.spin-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--ink);
+}
+.spin-dialog::backdrop { background: rgb(5 12 26 / .65); }
+.spin-dialog h2 { font-size: 20px; }
+.spin-dialog label { display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 16px; }
+.spin-dialog .button-row { justify-content: flex-end; }
+.spin-results { margin: 4px 0 12px; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 14px; overflow-wrap: anywhere; }
+#close-wheels { margin-top: 8px; }
 
 /* Bonspiel pages */
 .steps { display: flex; gap: 6px; max-width: 900px; margin: auto; padding: 12px 16px 0; overflow-x: auto; }
@@ -421,3 +438,42 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 .tv .head .total { font-size: 2.2vh; }
 .tv .team-red .total { color: #ff8e92; }
 .tv .team-blue .total { color: #8fbaff; }
+.tv-spin {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4vh;
+  padding: 2.6vh 3vw;
+  background: #0b1630 url("../assets/background.jpg") center / cover no-repeat;
+}
+.tv-spin h1 { font-size: 6vh; text-align: center; text-shadow: 0 .3vh 1vh rgb(0 0 0 / .7); overflow-wrap: anywhere; }
+.spin-wheels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.6vw; }
+.spin-sheet { min-width: 0; display: grid; justify-items: center; align-content: start; gap: 1.6vh; padding: 1.6vh .8vw; border-radius: 1vh; background: rgb(8 16 36 / .86); }
+.spin-sheet h2 { font-size: 4vh; color: var(--cream); }
+.wheel { position: relative; width: 100%; aspect-ratio: 1; display: grid; place-items: center; }
+.wheel p { font-size: 3vh; color: var(--cream); }
+.spin-off h2 { opacity: .55; }
+.wheel-pointer {
+  position: absolute;
+  z-index: 1;
+  top: -.6vh;
+  left: 50%;
+  margin-left: -1.6vh;
+  border: 1.6vh solid transparent;
+  border-top: 3.2vh solid #fff;
+  border-bottom: 0;
+  filter: drop-shadow(0 .2vh .4vh #000);
+}
+.wheel-turn { width: 100%; height: 100%; will-change: transform; }
+.wheel-turn svg { display: block; width: 100%; height: 100%; }
+.wheel-turn text { fill: #fff; font-size: 9px; font-weight: 700; }
+.wheel-turn path { stroke: #fff; stroke-width: 1; }
+.wheel-turn circle { fill: var(--navy); stroke: var(--gold); stroke-width: 2; }
+.slice-red path { fill: var(--red); }
+.slice-blue path { fill: var(--blue); }
+.slice-team0 path { fill: var(--navy-2); }
+.slice-team1 path { fill: var(--gold); }
+.wheel-turn .slice-team1 text { fill: var(--navy); }
+.spin-result { min-height: 8vh; font-size: 2.8vh; font-weight: 700; text-align: center; overflow-wrap: anywhere; }

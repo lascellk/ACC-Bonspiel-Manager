@@ -52,6 +52,15 @@ Rules to know:
 - The public Schedule tab shows the bonspiel's saved schedule if it has one. If not, it shows the hand-made draws linked to that bonspiel, in order of date and **Start time**.
 - On `admin.html`, a bonspiel draw can have its stones, hammer and timer changed, but not its teams, and it can't be deleted there.
 
+## Random hammer and colour
+
+**Random hammer / colour** in the draw editor saves the draw and puts four wheels on the TV, whatever it was showing and whichever draw is live. Tick **Hammer**, **Colour** or both, then press **Spin**.
+
+- Each wheel has the two team names, on red and blue if **Colour** is ticked. The team a wheel lands on gets the hammer and the colour it landed on.
+- The result is saved in the draw straight away. **Close** stays off until the wheels have stopped, about 14 seconds. Spinning again replaces the result.
+- A sheet with scores, or without two teams, doesn't spin and keeps its hammer and stones.
+- **Close** puts the TV back. If the admin page is closed first, use **Take the wheels off the TV** under **TV shows**. After 30 minutes the wheels leave by themselves.
+
 ## Setup
 
 About 30 minutes, once.

@@ -40,6 +40,7 @@
         <label><input type="radio" name="tv-view" value="bonspiel" disabled> Bonspiel page</label>
         <select id="tv-bonspiel" aria-label="Bonspiel to show on the TV" hidden></select>
       </div>
+      <button id="close-wheels" type="button" hidden>Take the wheels off the TV</button>
     </section>
     <section class="panel">
       <div class="panel-head">
@@ -57,6 +58,17 @@
     </section>
   </main>
   <dialog id="draw-dialog" class="draw-dialog"></dialog>
+  <dialog id="spin-dialog" class="spin-dialog">
+    <h2>Random hammer and colour</h2>
+    <p id="spin-status" class="note">The wheels are on the TV.</p>
+    <label class="check"><input id="spin-hammer" type="checkbox" checked> Hammer</label>
+    <label class="check"><input id="spin-colour" type="checkbox" checked> Colour</label>
+    <ul id="spin-results" class="spin-results"></ul>
+    <div class="button-row">
+      <button id="spin-go" type="button" class="primary">Spin</button>
+      <button id="spin-close" type="button">Close</button>
+    </div>
+  </dialog>
   <script type="module" src="js/admin.js"></script>
 </body>
 </html>

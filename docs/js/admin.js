@@ -1,11 +1,13 @@
 // Admin page: create and edit draws, choose the live draw, manage logos, adjust the timer.
 import { configured, get, post, serverNow, watch } from './api.js';
 import { setupCast } from './cast.js';
+import { spinResult, wheelSeconds } from './core.js';
 import { esc, loadLogos, logoOptions, notConfiguredNotice, paintClock, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
 const LOGO_SIZE = 160;
 const MAX_LOGO_CHARS = 45000; // Matches the limit in Code.gs.
+const SPIN_WAIT_MS = (wheelSeconds(4) + 5) * 1000; // The slowest wheel, plus one TV poll to notice the spin.
 let draws = [];
 let liveId = '';
 let logos = [];
@@ -14,6 +16,7 @@ let editing = null;
 let bonspiels = [];
 let sourceTeams = []; // Teams of the bonspiel chosen in the draw editor.
 let tvBonspiel = ''; // The bonspiel on the TV, or '' for the scoreboard.
+let spinning = false; // True until the TV has had time to finish the wheels.
 
 const blankGame = (sheet) => ({ sheet, team1: '', team2: '', logo1: '', logo2: '', stone: 'red', hammer: 0 });
 const blankDraw = () => ({
@@ -116,7 +119,11 @@ function openEditor(draw) {
     </div>
     <datalist id="team-names"></datalist>
     ${draw.games.map(gameFields).join('')}
-    <footer><button type="submit" class="primary">Save draw</button></footer>
+    <p id="spin-problem" class="note" hidden></p>
+    <footer class="draw-buttons">
+      <button type="button" id="open-spin">Random hammer / colour</button>
+      <button type="submit" class="primary">Save draw</button>
+    </footer>
   </form>`;
   dialog.showModal();
   if (bonspielName(draw.teamsFrom)) chooseTeamSource(draw.teamsFrom).catch((error) => toast(error.message));
@@ -155,6 +162,83 @@ async function run(work, done) {
   } catch (error) {
     toast(error.message);
   }
+}
+
+const spinOptions = () => ({ hammer: $('#spin-hammer').checked, colour: $('#spin-colour').checked });
+
+function resetSpinStatus(text) {
+  $('#spin-status').textContent = text;
+  $('#spin-results').innerHTML = '';
+}
+
+// The wheels use the saved teams, so the draw is saved first. Errors show here because a toast sits behind a dialog.
+async function openSpin(form) {
+  const problem = $('#spin-problem');
+  problem.hidden = true;
+  if (!form.reportValidity()) return;
+  const button = $('#open-spin');
+  button.disabled = true;
+  try {
+    const { id } = await post('saveDraw', { draw: readEditor(form) });
+    editing.id = id;
+    await post('openSpin', { id, ...spinOptions() });
+    resetSpinStatus('The wheels are on the TV.');
+    $('#spin-go').disabled = !spinOptions().hammer && !spinOptions().colour;
+    $('#spin-dialog').showModal();
+  } catch (error) {
+    problem.textContent = error.message;
+    problem.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function changeSpinOptions() {
+  const options = spinOptions();
+  $('#spin-go').disabled = true;
+  resetSpinStatus('The wheels are on the TV.');
+  try {
+    await post('openSpin', { id: editing.id, ...options });
+    $('#spin-go').disabled = !options.hammer && !options.colour;
+  } catch (error) {
+    resetSpinStatus(error.message);
+  }
+}
+
+function showSpinInEditor(spin) {
+  const form = $('#draw-form');
+  spin.games.filter((game) => game.open).forEach((game) => {
+    if (spin.colour) form.querySelector(`[name=stone-${game.sheet}][value=${game.stone}]`).checked = true;
+    if (spin.hammer) form.querySelector(`[name=hammer-${game.sheet}][value="${game.pick}"]`).checked = true;
+  });
+}
+
+function setSpinning(value) {
+  spinning = value;
+  ['#spin-go', '#spin-close', '#spin-hammer', '#spin-colour'].forEach((selector) => { $(selector).disabled = value; });
+}
+
+// Close waits for the wheels, so it can't take them off the TV before they stop.
+async function spinNow() {
+  setSpinning(true);
+  resetSpinStatus('Spinning on the TV…');
+  try {
+    const { spin } = await post('spinWheels');
+    showSpinInEditor(spin);
+    await new Promise((resolve) => { setTimeout(resolve, SPIN_WAIT_MS); });
+    resetSpinStatus('Saved in the draw.');
+    $('#spin-results').innerHTML = spin.games.filter((game) => game.open)
+      .map((game) => `<li><b>Sheet ${game.sheet}:</b> ${esc(spinResult(spin, game))}</li>`).join('');
+  } catch (error) {
+    resetSpinStatus(error.message);
+  }
+  setSpinning(false);
+}
+
+// Not on the dialog's close event: Chrome holds that back until the tab next draws, which a background tab doesn't.
+function closeSpinDialog() {
+  $('#spin-dialog').close();
+  run(() => post('closeSpin'));
 }
 
 function renderLogos() {
@@ -209,6 +293,18 @@ $('#draw-list').addEventListener('click', (event) => {
 
 $('#draw-dialog').addEventListener('click', (event) => {
   if (event.target.classList.contains('close')) $('#draw-dialog').close();
+  if (event.target.id === 'open-spin') openSpin($('#draw-form'));
+});
+
+$('#spin-go').addEventListener('click', spinNow);
+$('#spin-close').addEventListener('click', closeSpinDialog);
+$('#spin-hammer').addEventListener('change', changeSpinOptions);
+$('#spin-colour').addEventListener('change', changeSpinOptions);
+$('#close-wheels').addEventListener('click', () => run(() => post('closeSpin'), 'TV is back to normal'));
+
+$('#spin-dialog').addEventListener('cancel', (event) => {
+  event.preventDefault();
+  if (!spinning) closeSpinDialog();
 });
 
 $('#draw-dialog').addEventListener('change', (event) => {
@@ -275,9 +371,10 @@ async function start() {
   renderLogos();
   await refresh();
   $('#new-draw').disabled = false; // The form needs the bonspiels for Teams from.
-  watch((next, { tv }) => {
+  watch((next, { tv, spin }) => {
     live = next;
     renderLive();
+    $('#close-wheels').hidden = !spin || $('#spin-dialog').open;
     // Rebuilt only on a change, so a poll can't close the list while it is open.
     if ((tv || '') !== tvBonspiel) {
       tvBonspiel = tv || '';
