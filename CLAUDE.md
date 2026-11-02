@@ -4,6 +4,8 @@ Read `README.md` for what the app does and how it is set up, and `PLAN.md` for t
 
 This file is the project memory that follows the repo between computers. Claude's own memory stays on one computer, so record anything needed on every computer here, commit it and push it.
 
+Keep this file up to date without being asked. As work goes on, add any decision, rule, setup step or unfinished work that a later session would need, and remove what stops being true. Keep it short, and leave out what the code, `README.md` or git history already say. Commit and push each update with the work it belongs to, or on its own if there is no other work.
+
 ## Working on it
 
 - `npm test` runs the rules and backend tests. `npm run dev` serves http://localhost:8787 with admin PIN 1234 and score PIN 0000.
