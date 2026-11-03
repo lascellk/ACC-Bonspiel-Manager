@@ -28,6 +28,7 @@ Keep this file up to date without being asked. As work goes on, add any decision
 ## Unfinished
 
 - On 2026-11-01 about 1 in 3 backend calls hung for 2 minutes, then failed with Google's "server error occurred while reading from storage" (`DEADLINE_EXCEEDED`). The ACC Scoreboard backend was not affected, and a new deployment address hung just as often. The website now retries reads and PIN logins after 10 seconds, but saves can still hang. The user will recheck it as a likely Google problem. If it persists, copying the backend into a new Apps Script project is the next step.
+
 ## Rules
 
 - This app is separate from the live ACC Scoreboard. Never change that app's Sheet, backend, site or Cast app.
