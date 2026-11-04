@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  assignDraws, assignPools, buildGames, doubleKnockout, drawTimes, fixedGames, nextRound, pairRound, playoffGames, playoffSeeds,
+  assignDraws, assignPools, buildGames, doubleKnockout, drawTimes, fixedGames, linkedGames, nextRound, pairRound, playoffGames, playoffSeeds,
   roundRobin, scheduleProblems, singleKnockout, sourceLabel, standings, swapGames, SHEETS,
 } from '../docs/js/bonspiel.js';
 
@@ -246,6 +246,12 @@ test('a tie that remains is flagged, and unfinished games do not count', () => {
   const teams = makeTeams(2);
   const rows = standings(teams, [played('t1', 't2', 3, 3), { ...played('t1', 't2', 8, 0), final: false }], settings);
   assert.ok(rows.every((row) => row.unresolved && row.points === 1 && row.played === 1));
+});
+test('linked hand-made games count by team name', () => {
+  const game = (team1, team2, score1, score2) => ({ ...played('', '', score1, score2), team1, team2 });
+  const draws = [{ games: [game(' team 1', 'Team 2', 5, 3), game('Team 2', 'Visitors', 9, 0), { ...game('Team 1', 'Team 2', 0, 4), final: false }] }];
+  const { t1, t2 } = rowsById(standings(makeTeams(2), linkedGames(draws, makeTeams(2)), settings));
+  assert.deepEqual([t1.played, t1.points, t2.played, t2.points], [1, 2, 1, 0]);
 });
 test('playoff games do not count in the standings', () => {
   const rows = standings(makeTeams(2), [{ ...played('t1', 't2', 3, 1), phase: 'playoff' }], settings);

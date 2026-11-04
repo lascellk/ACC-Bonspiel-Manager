@@ -39,7 +39,7 @@ async function load() {
     return;
   }
   const result = await get('bonspiel', { id });
-  data = { bonspiel: result.bonspiel, teams: result.teams, draws: result.draws };
+  data = { bonspiel: result.bonspiel, teams: result.teams, draws: result.draws, linkedDraws: result.linkedDraws };
   liveId = result.draw?.id || '';
   $('#page-title').textContent = data.bonspiel.name;
   $('#event-link').href = `event.html?id=${id}`;

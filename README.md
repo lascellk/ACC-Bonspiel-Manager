@@ -48,7 +48,7 @@ Rules to know:
 - Double knockout ends with one final between the two bracket winners, with no reset game.
 - **Delete schedule** on the Schedule step removes the schedule and its draws, and keeps the teams.
 - Once any score is entered, the schedule can't be replaced or deleted.
-- On `admin.html`, a hand-made draw can be linked to a bonspiel: choose it under **Teams from**, then pick each team from the list or type any name. A picked team brings its logo. Its scores don't count in that bonspiel's standings.
+- On `admin.html`, a hand-made draw can be linked to a bonspiel: choose it under **Teams from**, then pick each team from the list or type any name. A picked team brings its logo. Its finished games count in that bonspiel's standings for any team whose name matches one of the bonspiel's teams, ignoring capitals. They don't count towards seeding the next round or the playoffs.
 - The public Schedule tab shows the bonspiel's saved schedule if it has one. If not, it shows the hand-made draws linked to that bonspiel, in order of date and **Start time**.
 - On `admin.html`, a bonspiel draw can have its stones, hammer and timer changed, but not its teams, and it can't be deleted there.
 

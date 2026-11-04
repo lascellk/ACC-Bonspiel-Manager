@@ -429,6 +429,15 @@ export function pairRound(teams, games, settings, slots) {
 export const flatGames = (draws) =>
   draws.flatMap((draw) => draw.games.filter((game) => game.gameId).map((game) => ({ ...game, draw })));
 
+// Games of the hand-made draws linked to a bonspiel, given its team ids by name so they count in its standings.
+export function linkedGames(linkedDraws, teams) {
+  const key = (name) => String(name).trim().toLowerCase();
+  const ids = new Map(teams.map((team) => [key(team.name), team.id]));
+  return linkedDraws.flatMap((draw) => draw.games.map((game) => ({
+    ...game, team1Id: ids.get(key(game.team1)) || '', team2Id: ids.get(key(game.team2)) || '', phase: 'pool', draw,
+  })));
+}
+
 function parseBracket(label) {
   if (label === 'F') return { letter: 'F', round: 1, position: 1 };
   const match = /^([RWL])(\d+)\.(\d+)$/.exec(label);

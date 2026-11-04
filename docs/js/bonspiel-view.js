@@ -1,6 +1,6 @@
 // HTML pieces shared by the organiser page and the public event page.
 import { hasTeams, totals } from './core.js';
-import { bracketSections, flatGames, poolStandings, sourceLabel } from './bonspiel.js';
+import { bracketSections, flatGames, linkedGames, poolStandings, sourceLabel } from './bonspiel.js';
 import { esc, logoHtml } from './view.js';
 
 export function formatTime(startsAt) {
@@ -47,10 +47,10 @@ export function scheduleHtml(draws, liveId) {
 }
 
 export function standingsHtml(data) {
-  const { bonspiel, teams, draws } = data;
+  const { bonspiel, teams, draws, linkedDraws = [] } = data;
   if (bonspiel.format === 'single' || bonspiel.format === 'double') return '<p class="empty">This format has a bracket, not standings.</p>';
   const { trackEnds, scorePoints, maxEndPoints } = bonspiel.settings;
-  const groups = poolStandings(teams, flatGames(draws), bonspiel.settings);
+  const groups = poolStandings(teams, [...flatGames(draws), ...linkedGames(linkedDraws, teams)], bonspiel.settings);
   const keys = [
     trackEnds && 'EW is ends won.',
     scorePoints && `Sc is points scored${maxEndPoints ? `, counting at most ${maxEndPoints} an end` : ''}.`,
