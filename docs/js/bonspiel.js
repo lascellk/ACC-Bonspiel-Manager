@@ -315,6 +315,9 @@ const endsWon = (game, side) => game.ends.filter((end) => end.team === side && e
 const cappedScore = (game, side, limit) => game.ends.filter((end) => end.team === side)
   .reduce((sum, end) => sum + (limit ? Math.min(end.pts, limit) : end.pts), 0);
 
+// The numbers an organiser can type over. A team's standing holds only the ones changed.
+export const STANDING_FIELDS = ['played', 'won', 'tied', 'lost', 'endsWon', 'scored', 'points', 'diff'];
+
 // Rank by points, then head-to-head among the tied teams, then points-for difference. Head-to-head
 // counts only win, tie and loss points. Draw-shot results aren't recorded, so a tie that remains is
 // flagged for the organiser with tied: true.
@@ -340,6 +343,13 @@ export function standings(teams, games, settings) {
     });
   });
 
+  rows.forEach((item) => {
+    item.diff = item.pf - item.pa;
+    STANDING_FIELDS.forEach((field) => {
+      if (Number.isFinite(item.team.standing?.[field])) item[field] = item.team.standing[field];
+    });
+  });
+
   const headToHead = (group) => {
     const ids = new Set(group.map((item) => item.team.id));
     const score = new Map(group.map((item) => [item.team.id, 0]));
@@ -355,12 +365,12 @@ export function standings(teams, games, settings) {
     if (level.length === 1) return level;
     const score = headToHead(level);
     return groupBy(level, (item) => score.get(item.team.id)).flatMap((group) =>
-      groupBy(group, (item) => item.pf - item.pa).flatMap((still) => {
+      groupBy(group, (item) => item.diff).flatMap((still) => {
         if (still.length > 1) still.forEach((item) => { item.unresolved = true; });
         return still;
       }));
   });
-  return ranked.map((item, i) => ({ ...item, rank: i + 1, diff: item.pf - item.pa }));
+  return ranked.map((item, i) => ({ ...item, rank: i + 1 }));
 }
 
 export function poolStandings(teams, games, settings) {
@@ -437,6 +447,8 @@ export function linkedGames(linkedDraws, teams) {
     ...game, team1Id: ids.get(key(game.team1)) || '', team2Id: ids.get(key(game.team2)) || '', phase: 'pool', draw,
   })));
 }
+
+export const standingGames = ({ draws, linkedDraws = [], teams }) => [...flatGames(draws), ...linkedGames(linkedDraws, teams)];
 
 function parseBracket(label) {
   if (label === 'F') return { letter: 'F', round: 1, position: 1 };

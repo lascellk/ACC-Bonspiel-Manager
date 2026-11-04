@@ -253,6 +253,13 @@ test('linked hand-made games count by team name', () => {
   const { t1, t2 } = rowsById(standings(makeTeams(2), linkedGames(draws, makeTeams(2)), settings));
   assert.deepEqual([t1.played, t1.points, t2.played, t2.points], [1, 2, 1, 0]);
 });
+test('typed-in numbers replace the worked-out ones and set the order', () => {
+  const teams = makeTeams(3).map((team) => (team.id === 't3' ? { ...team, standing: { points: 9, won: 4 } } : team));
+  const rows = standings(teams, [played('t1', 't2', 5, 3)], settings);
+  assert.deepEqual(rows.map((row) => [row.team.id, row.points, row.won, row.played]), [['t3', 9, 4, 0], ['t1', 2, 1, 1], ['t2', 0, 0, 1]]);
+  const level = makeTeams(2).map((team) => ({ ...team, standing: { points: 2, diff: team.id === 't2' ? 5 : 1 } }));
+  assert.deepEqual(standings(level, [], settings).map((row) => [row.team.id, row.diff]), [['t2', 5], ['t1', 1]]);
+});
 test('playoff games do not count in the standings', () => {
   const rows = standings(makeTeams(2), [{ ...played('t1', 't2', 3, 1), phase: 'playoff' }], settings);
   assert.equal(rows[0].played, 0);

@@ -9,7 +9,7 @@ var TABS = {
     'gameId', 'team1Id', 'team2Id', 'phase', 'bracket', 'source1', 'source2'],
   Logos: ['id', 'name', 'data'],
   Bonspiels: ['id', 'name', 'startDate', 'format', 'settings', 'status'],
-  Teams: ['id', 'bonspielId', 'name', 'skip', 'third', 'second', 'lead', 'club', 'logo', 'seed', 'pool']
+  Teams: ['id', 'bonspielId', 'name', 'skip', 'third', 'second', 'lead', 'club', 'logo', 'seed', 'pool', 'standing']
 };
 var CACHE_KEY = 'live-draw';
 var CACHE_VERSION = 'bonspiel-version';
@@ -19,6 +19,7 @@ var MAX_TEAMS = 16;
 var SHEETS = 4;
 var MAX_LOGO_CHARS = 45000; // A Sheet cell holds 50,000 characters.
 var MAX_PIN_FAILURES = 10;
+var STANDING_FIELDS = ['played', 'won', 'tied', 'lost', 'endsWon', 'scored', 'points', 'diff'];
 var SPIN_MAX_MS = 30 * 60000; // The wheels leave the TV by themselves if the admin page goes away.
 
 var ACTIONS = {
@@ -43,6 +44,7 @@ var ACTIONS = {
   saveTeam: { role: 'admin', fn: saveTeam },
   deleteTeam: { role: 'admin', fn: deleteTeam },
   saveSeeding: { role: 'admin', fn: saveSeeding },
+  saveStandings: { role: 'admin', fn: saveStandings },
   saveSchedule: { role: 'admin', fn: saveSchedule },
   deleteSchedule: { role: 'admin', fn: deleteSchedule },
   seedPlayoffs: { role: 'admin', fn: seedPlayoffs },
@@ -540,7 +542,8 @@ function toBonspiel(row) {
 function toTeam(row) {
   return {
     id: String(row.id), name: String(row.name), skip: String(row.skip), third: String(row.third), second: String(row.second),
-    lead: String(row.lead), club: String(row.club), logo: String(row.logo), seed: Number(row.seed) || 0, pool: String(row.pool)
+    lead: String(row.lead), club: String(row.club), logo: String(row.logo), seed: Number(row.seed) || 0, pool: String(row.pool),
+    standing: JSON.parse(row.standing || '{}')
   };
 }
 
@@ -690,6 +693,24 @@ function saveSeeding(body) {
     if (!row) throw new Error('That team no longer exists');
     row.seed = input.seed ? wholeNumber(input.seed, 0, 0, MAX_TEAMS) : '';
     row.pool = cleanText(input.pool, 2);
+    writeRow('Teams', row._row, row);
+  });
+}
+
+// body.teams: [{id, standing: {points: 7, ...}}]. A blank number goes back to the one worked out from the games.
+function saveStandings(body) {
+  findBonspiel(body.id);
+  var teams = teamsOf(body.id);
+  (body.teams || []).forEach(function (input) {
+    var row = teams.filter(function (team) { return String(team.id) === String(input.id); })[0];
+    if (!row) throw new Error('That team no longer exists');
+    var standing = {};
+    STANDING_FIELDS.forEach(function (field) {
+      var value = (input.standing || {})[field];
+      if (value === '' || value === null || value === undefined || isNaN(Number(value))) return;
+      standing[field] = wholeNumber(value, 0, -999, 999);
+    });
+    row.standing = Object.keys(standing).length ? JSON.stringify(standing) : '';
     writeRow('Teams', row._row, row);
   });
 }

@@ -49,6 +49,8 @@ Rules to know:
 - **Delete schedule** on the Schedule step removes the schedule and its draws, and keeps the teams.
 - Once any score is entered, the schedule can't be replaced or deleted.
 - On `admin.html`, a hand-made draw can be linked to a bonspiel: choose it under **Teams from**, then pick each team from the list or type any name. A picked team brings its logo. Its finished games count in that bonspiel's standings for any team whose name matches one of the bonspiel's teams, ignoring capitals. They don't count towards seeding the next round or the playoffs.
+- The Run step lists the bonspiel's own draws, then its linked hand-made draws in order of date and **Start time**, each with **Make live**.
+- **Edit standings** on the Run step shows each number worked out from the games in its box. Type a number to replace it, or empty the box to go back to the games. **Use the games for all** removes every typed number. Typed numbers show on the public page and set the order: teams rank on the typed points, then head-to-head, then the typed difference. They also count when seeding the next round or the playoffs, and they stay as typed when more games finish.
 - The public Schedule tab shows the bonspiel's saved schedule if it has one. If not, it shows the hand-made draws linked to that bonspiel, in order of date and **Start time**.
 - On `admin.html`, a bonspiel draw can have its stones, hammer and timer changed, but not its teams, and it can't be deleted there.
 

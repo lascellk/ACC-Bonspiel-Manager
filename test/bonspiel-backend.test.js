@@ -303,3 +303,15 @@ test('end and score options are saved and forced into range', () => {
   const { settings: blank } = fresh.api.get({ action: 'bonspiel', id: fresh.id }).bonspiel;
   assert.deepEqual([blank.trackEnds, blank.pointsPerEnd, blank.scorePoints, blank.maxEndPoints], [false, 1, false, 0]);
 });
+test('typed-in standings are saved per team, kept through a team edit, and cleared when left empty', () => {
+  const { api, id, teams } = withBonspiel();
+  const standing = () => api.get({ action: 'bonspiel', id }).teams.map((team) => team.standing);
+  assert.equal(scorer(api, { action: 'saveStandings', id, teams: [{ id: teams[0], standing: { points: 5 } }] }).ok, false);
+  admin(api, { action: 'saveStandings', id, teams: [{ id: teams[0], standing: { points: '7', diff: -3, won: '', rank: 1 } }, { id: teams[1], standing: { lost: 5000 } }] });
+  assert.deepEqual(standing(), [{ points: 7, diff: -3 }, { lost: 999 }, {}, {}]);
+  admin(api, { action: 'saveTeam', team: { id: teams[0], bonspielId: id, name: 'Renamed' } });
+  assert.deepEqual(standing()[0], { points: 7, diff: -3 });
+  admin(api, { action: 'saveStandings', id, teams: [{ id: teams[0], standing: {} }] });
+  assert.deepEqual(standing()[0], {});
+  assert.match(admin(api, { action: 'saveStandings', id, teams: [{ id: 'gone', standing: {} }] }).error, /no longer exists/);
+});

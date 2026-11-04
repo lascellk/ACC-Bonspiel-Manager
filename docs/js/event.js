@@ -2,8 +2,7 @@
 // With ?tv=1 it fills a TV and moves through its tabs by itself.
 import { configured, get } from './api.js';
 import { FORMATS } from './bonspiel.js';
-import { bracketHtml, scheduleHtml, standingsHtml, teamsHtml } from './bonspiel-view.js';
-import { hasTeams } from './core.js';
+import { bracketHtml, linkedSchedule, scheduleHtml, standingsHtml, teamsHtml } from './bonspiel-view.js';
 import { esc, loadLogos, notConfiguredNotice, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -26,9 +25,7 @@ function tabs() {
 
 // The saved schedule if there is one, otherwise the hand-made draws linked to this bonspiel.
 function scheduleDraws() {
-  if (data.draws.length) return data.draws;
-  const when = (draw) => draw.startsAt || draw.date;
-  return data.linkedDraws.filter((draw) => draw.games.some(hasTeams)).sort((a, b) => when(a).localeCompare(when(b)));
+  return data.draws.length ? data.draws : linkedSchedule(data.linkedDraws);
 }
 
 function body() {

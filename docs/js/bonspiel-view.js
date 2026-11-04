@@ -1,6 +1,6 @@
 // HTML pieces shared by the organiser page and the public event page.
 import { hasTeams, totals } from './core.js';
-import { bracketSections, flatGames, linkedGames, poolStandings, sourceLabel } from './bonspiel.js';
+import { bracketSections, flatGames, poolStandings, sourceLabel, standingGames } from './bonspiel.js';
 import { esc, logoHtml } from './view.js';
 
 export function formatTime(startsAt) {
@@ -46,11 +46,17 @@ export function scheduleHtml(draws, liveId) {
   </article>`).join('')}</div>`;
 }
 
+// Hand-made draws linked to a bonspiel that have teams, in order of start.
+export function linkedSchedule(linkedDraws) {
+  const when = (draw) => draw.startsAt || draw.date;
+  return linkedDraws.filter((draw) => draw.games.some(hasTeams)).sort((a, b) => when(a).localeCompare(when(b)));
+}
+
 export function standingsHtml(data) {
-  const { bonspiel, teams, draws, linkedDraws = [] } = data;
+  const { bonspiel, teams } = data;
   if (bonspiel.format === 'single' || bonspiel.format === 'double') return '<p class="empty">This format has a bracket, not standings.</p>';
   const { trackEnds, scorePoints, maxEndPoints } = bonspiel.settings;
-  const groups = poolStandings(teams, [...flatGames(draws), ...linkedGames(linkedDraws, teams)], bonspiel.settings);
+  const groups = poolStandings(teams, standingGames(data), bonspiel.settings);
   const keys = [
     trackEnds && 'EW is ends won.',
     scorePoints && `Sc is points scored${maxEndPoints ? `, counting at most ${maxEndPoints} an end` : ''}.`,

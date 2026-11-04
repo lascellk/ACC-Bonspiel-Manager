@@ -2,21 +2,22 @@
 import { configured, get, post } from './api.js';
 import {
   assignDraws, assignPools, buildGames, bySeed, DEFAULT_SETTINGS, drawTimes, flatGames, FORMATS, MAX_TEAMS, nextRound, pairRound,
-  playoffSeeds, scheduleProblems, SHEETS, sourceLabel, swapGames,
+  playoffSeeds, poolStandings, scheduleProblems, SHEETS, sourceLabel, STANDING_FIELDS, standingGames, standings, swapGames,
 } from './bonspiel.js';
-import { bracketHtml, scheduleHtml, standingsHtml } from './bonspiel-view.js';
+import { bracketHtml, linkedSchedule, scheduleHtml, standingsHtml } from './bonspiel-view.js';
 import { esc, loadLogos, logoHtml, logoOptions, notConfiguredNotice, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
 const STEPS = ['Details', 'Teams', 'Schedule', 'Run'];
 let logos = [];
 let list = [];
-let data = null; // {bonspiel, teams, draws} for the open bonspiel.
+let data = null; // {bonspiel, teams, draws, linkedDraws} for the open bonspiel.
 let liveId = '';
 let step = 0;
 let preview = null; // Generated draws, not yet saved.
 let picked = null; // The {draw, sheet} chosen first for a swap.
 let timing = { first: '', gap: 180, perDay: 4 };
+let editingStandings = false;
 
 const openId = () => new URLSearchParams(location.search).get('id');
 const blankBonspiel = () => ({ id: '', name: '', startDate: new Date().toLocaleDateString('en-CA'), format: 'pools', settings: { ...DEFAULT_SETTINGS } });
@@ -305,11 +306,60 @@ function seedingPanel() {
   </form>`;
 }
 
+const STANDING_LABELS = { played: 'G', won: 'W', tied: 'T', lost: 'L', endsWon: 'EW', scored: 'Sc', points: 'Pts', diff: 'Diff' };
+
+// Each box shows the number worked out from the games. A number typed in replaces it, and an empty box goes back to it.
+function standingsForm() {
+  const { settings } = data.bonspiel;
+  const fields = STANDING_FIELDS.filter((field) => (field !== 'endsWon' || settings.trackEnds) && (field !== 'scored' || settings.scorePoints));
+  const games = standingGames(data);
+  const worked = new Map(standings(data.teams.map((team) => ({ ...team, standing: {} })), games, settings).map((row) => [row.team.id, row]));
+  const order = poolStandings(data.teams, games, settings).flatMap((group) => group.rows);
+  const box = (team, field) => `<td><input type="number" name="${esc(team.id)}.${field}" step="1" min="-999" max="999"
+    value="${team.standing?.[field] ?? ''}" placeholder="${worked.get(team.id)[field]}" aria-label="${esc(team.name)} ${STANDING_LABELS[field]}"></td>`;
+  return `<form id="standings-form" class="panel">
+    <div class="panel-head">
+      <div><h2>Edit standings</h2><p>Type a number to replace the one worked out from the games. Leave a box empty to use the games.</p></div>
+    </div>
+    <div class="table-wrap"><table class="standings edit-standings">
+      <thead><tr><th class="left">Team</th>${fields.map((field) => `<th>${STANDING_LABELS[field]}</th>`).join('')}</tr></thead>
+      <tbody>${order.map(({ team }) => `<tr><td class="left">${esc(team.name)}</td>${fields.map((field) => box(team, field)).join('')}</tr>`).join('')}</tbody>
+    </table></div>
+    <div class="button-row">
+      <button type="button" data-action="cancel-standings">Cancel</button>
+      <button type="button" class="danger" data-action="clear-standings">Use the games for all</button>
+      <button type="submit" class="primary">Save standings</button>
+    </div>
+  </form>`;
+}
+
+function readStandings(form) {
+  const values = new FormData(form);
+  return data.teams.map((team) => ({
+    id: team.id,
+    standing: Object.fromEntries(STANDING_FIELDS
+      .map((field) => [field, values.get(`${team.id}.${field}`) ?? ''])
+      .filter(([, value]) => value !== '')
+      .map(([field, value]) => [field, Number(value)])),
+  }));
+}
+
+function saveStandings(teams, done) {
+  run(async () => {
+    await post('saveStandings', { id: data.bonspiel.id, teams });
+    editingStandings = false;
+  }, done);
+}
+
 function renderRun() {
   const hasStandings = ['pools', 'fixed'].includes(data.bonspiel.format);
+  const standingsPanel = editingStandings ? standingsForm() : `<section class="panel">
+    <div class="panel-head"><h2>Standings</h2><button type="button" data-action="edit-standings">Edit standings</button></div>
+    ${standingsHtml(data)}
+  </section>`;
   $('#content').innerHTML = `${roundPanel() || seedingPanel()}
-    <section class="panel"><h2>Draws</h2>${scheduleHtml(data.draws, liveId)}</section>
-    ${hasStandings ? `<section class="panel"><h2>Standings</h2>${standingsHtml(data)}</section>` : ''}
+    <section class="panel"><h2>Draws</h2>${scheduleHtml([...data.draws, ...linkedSchedule(data.linkedDraws)], liveId)}</section>
+    ${hasStandings ? standingsPanel : ''}
     <section class="panel"><h2>Bracket</h2>${bracketHtml(data.draws)}</section>`;
   document.querySelectorAll('[data-draw-actions]').forEach((slot) => {
     const id = slot.dataset.drawActions;
@@ -325,6 +375,7 @@ $('#steps').addEventListener('click', (event) => {
   const value = event.target.dataset.step;
   if (value === undefined) return;
   step = Number(value);
+  editingStandings = false;
   load().catch((error) => toast(error.message));
 });
 
@@ -340,6 +391,7 @@ $('#content').addEventListener('submit', (event) => {
     const seeds = new FormData(event.target).getAll('seed');
     run(() => post('seedPlayoffs', { id: data.bonspiel.id, seeds }), 'Playoff games filled');
   }
+  if (event.target.id === 'standings-form') saveStandings(readStandings(event.target), 'Standings saved');
   if (event.target.id === 'round-seeding') {
     const teams = new FormData(event.target).getAll('team');
     const round = Number(event.target.dataset.round);
@@ -388,6 +440,13 @@ $('#content').addEventListener('click', (event) => {
   if (action === 'assign-pools') {
     const teams = assignPools(data.teams, data.bonspiel.settings.poolCount);
     run(() => post('saveSeeding', { id: data.bonspiel.id, teams }), 'Pools assigned');
+  }
+  if (action === 'edit-standings' || action === 'cancel-standings') {
+    editingStandings = action === 'edit-standings';
+    render();
+  }
+  if (action === 'clear-standings' && confirm('Remove every typed-in number and use the games for all teams?')) {
+    saveStandings(data.teams.map((team) => ({ id: team.id, standing: {} })), 'Standings use the games again');
   }
   if (action === 'generate') generate();
   if (action === 'save-schedule') saveSchedule();
