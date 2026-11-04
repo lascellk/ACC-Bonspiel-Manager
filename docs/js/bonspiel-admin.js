@@ -35,7 +35,7 @@ async function load() {
   if (!id) {
     data = null;
     list = (await get('bonspiels')).bonspiels;
-    $('#page-title').textContent = 'Bonspiels';
+    $('#page-title').textContent = 'Almonte Curling Club Bonspiel Manager';
     renderList();
     return;
   }

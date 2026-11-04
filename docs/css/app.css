@@ -133,6 +133,7 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
   color: #fff;
 }
 .top h1 { flex: 1; min-width: 0; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#page-title { white-space: normal; line-height: 1.2; }
 .top-link {
   display: inline-grid;
   place-items: center;
