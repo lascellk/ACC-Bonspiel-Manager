@@ -45,6 +45,7 @@ var ACTIONS = {
   deleteTeam: { role: 'admin', fn: deleteTeam },
   saveSeeding: { role: 'admin', fn: saveSeeding },
   saveStandings: { role: 'admin', fn: saveStandings },
+  resetResults: { role: 'admin', fn: resetResults },
   saveSchedule: { role: 'admin', fn: saveSchedule },
   deleteSchedule: { role: 'admin', fn: deleteSchedule },
   seedPlayoffs: { role: 'admin', fn: seedPlayoffs },
@@ -713,6 +714,33 @@ function saveStandings(body) {
     row.standing = Object.keys(standing).length ? JSON.stringify(standing) : '';
     writeRow('Teams', row._row, row);
   });
+}
+
+// Puts the bonspiel back as if nothing had been played: its draws and the hand-made draws linked to it lose their
+// scores and timers, games filled from results or seeds wait for their teams again, and typed standings go.
+function resetResults(body) {
+  var row = findBonspiel(body.id);
+  var id = String(body.id);
+  var draws = readTab('Draws').filter(function (draw) { return String(draw.bonspielId) === id || String(draw.teamsFrom) === id; });
+  draws.forEach(function (draw) {
+    draw.startedAt = 0;
+    draw.leftMs = Number(draw.minutes) * 60000;
+    writeRow('Draws', draw._row, draw);
+  });
+  gamesOf(draws).forEach(function (game) {
+    game.ends = '[]';
+    game.final = false;
+    [1, 2].forEach(function (slot) {
+      if (String(game['source' + slot])) putTeam(game, slot, null);
+    });
+    writeRow('Games', game._row, game);
+  });
+  teamsOf(id).forEach(function (team) {
+    team.standing = '';
+    writeRow('Teams', team._row, team);
+  });
+  row.status = drawsOf(id).length ? 'scheduled' : 'setup';
+  writeRow('Bonspiels', row._row, row);
 }
 
 // body.draws: [{name, startsAt, games: [{sheet, id, team1Id, team2Id, source1, source2, phase, bracket, hammer}]}]

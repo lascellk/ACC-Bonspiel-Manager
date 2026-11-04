@@ -306,6 +306,8 @@ function seedingPanel() {
   </form>`;
 }
 
+const RESET_WARNING = 'Delete every score in this bonspiel, including its linked hand-made draws, and all typed standings? '
+  + 'Timers restart, and games filled from results or seeds wait for their teams again. This can\'t be undone.';
 const STANDING_LABELS = { played: 'G', won: 'W', tied: 'T', lost: 'L', endsWon: 'EW', scored: 'Sc', points: 'Pts', diff: 'Diff' };
 
 // Each box shows the number worked out from the games. A number typed in replaces it, and an empty box goes back to it.
@@ -330,6 +332,7 @@ function standingsForm() {
       <button type="button" class="danger" data-action="clear-standings">Use the games for all</button>
       <button type="submit" class="primary">Save standings</button>
     </div>
+    <p class="note">Start again: <button type="button" class="danger" data-action="reset-results">Reset all results</button></p>
   </form>`;
 }
 
@@ -447,6 +450,12 @@ $('#content').addEventListener('click', (event) => {
   }
   if (action === 'clear-standings' && confirm('Remove every typed-in number and use the games for all teams?')) {
     saveStandings(data.teams.map((team) => ({ id: team.id, standing: {} })), 'Standings use the games again');
+  }
+  if (action === 'reset-results' && confirm(RESET_WARNING)) {
+    run(async () => {
+      await post('resetResults', { id: data.bonspiel.id });
+      editingStandings = false;
+    }, 'All results deleted');
   }
   if (action === 'generate') generate();
   if (action === 'save-schedule') saveSchedule();

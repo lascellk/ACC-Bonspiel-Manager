@@ -315,3 +315,31 @@ test('typed-in standings are saved per team, kept through a team edit, and clear
   assert.deepEqual(standing()[0], {});
   assert.match(admin(api, { action: 'saveStandings', id, teams: [{ id: 'gone', standing: {} }] }).error, /no longer exists/);
 });
+test('resetting results clears scores, timers, filled games and typed standings, and keeps the rest', () => {
+  const { api, id, teams, draws, one, two, score, final } = withBracket();
+  const made = admin(api, { action: 'saveDraw', draw: { name: 'One-off', teamsFrom: id, minutes: 60, games: [{ sheet: 1, team1: 'A', team2: 'Guest' }] } }).id;
+  const unlinked = admin(api, { action: 'saveDraw', draw: { name: 'Other', games: [{ sheet: 1, team1: 'X', team2: 'Y' }] } }).id;
+  score(one, 1, 1);
+  final(one, 1);
+  score(made, 1, 0);
+  final(made, 1);
+  score(unlinked, 1, 0);
+  admin(api, { action: 'goLive', id: made });
+  assert.equal(scorer(api, { action: 'timer', id: made, op: 'start' }).ok, true);
+  assert.ok(api.get().draw.startedAt > 0);
+  admin(api, { action: 'saveStandings', id, teams: [{ id: teams[0], standing: { points: 9 } }] });
+  assert.equal(draws()[1].games[0].team1, 'D');
+
+  assert.equal(scorer(api, { action: 'resetResults', id }).ok, false);
+  assert.equal(admin(api, { action: 'resetResults', id }).ok, true);
+  const result = api.get({ action: 'bonspiel', id });
+  const games = [...result.draws, ...result.linkedDraws].flatMap((draw) => draw.games);
+  assert.ok(games.every((game) => !game.final && !game.ends.length));
+  assert.deepEqual([draws()[0].games[0].team1, draws()[0].games[0].team2], ['A', 'D']);
+  assert.deepEqual([draws()[1].games[0].team1, draws()[1].games[0].team1Id, draws()[1].games[1].team1], ['', '', '']);
+  assert.equal(result.linkedDraws[0].games[0].team2, 'Guest');
+  assert.deepEqual([result.linkedDraws[0].startedAt, result.linkedDraws[0].leftMs], [0, 3600000]);
+  assert.ok(result.teams.every((team) => !Object.keys(team.standing).length));
+  assert.equal(api.get({ action: 'draws' }).draws.find((draw) => draw.id === unlinked).games[0].ends.length, 1);
+  assert.equal(two, draws()[1].id);
+});
