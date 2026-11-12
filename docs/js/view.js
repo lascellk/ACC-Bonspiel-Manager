@@ -21,9 +21,11 @@ export const logoOptions = (list, selected) => `<option value="">Initials</optio
   <option value="acc" ${selected === 'acc' ? 'selected' : ''}>ACC crest</option>
   ${list.map((logo) => `<option value="${esc(logo.id)}" ${selected === logo.id ? 'selected' : ''}>${esc(logo.name)}</option>`).join('')}`;
 
-export function logoHtml(ref, name) {
+// A size in pixels is written on the image too, so it stays small even if the stylesheet is an older copy.
+export function logoHtml(ref, name, size) {
   const src = ref === 'acc' ? 'assets/crest.png' : logos[ref]?.data;
-  if (src) return `<img class="logo" src="${esc(src)}" alt="">`;
+  const fixed = size ? ` width="${size}" height="${size}" style="vertical-align: middle"` : '';
+  if (src) return `<img class="logo" src="${esc(src)}" alt=""${fixed}>`;
   const letters = name.split(/\s+/).map((word) => word[0]).join('').slice(0, 2).toUpperCase();
   return `<span class="logo logo-text" aria-hidden="true">${esc(letters)}</span>`;
 }
