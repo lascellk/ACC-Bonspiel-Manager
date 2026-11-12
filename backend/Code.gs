@@ -659,6 +659,7 @@ function saveTeam(body) {
   if (input.id && !row) throw new Error('That team no longer exists');
   if (!row && teams.length >= MAX_TEAMS) throw new Error('A bonspiel can have up to ' + MAX_TEAMS + ' teams');
   var item = row || { id: Utilities.getUuid().slice(0, 8), bonspielId: input.bonspielId };
+  var oldName = row ? String(row.name) : '';
   item.skip = cleanText(input.skip, 40);
   item.name = cleanText(input.name, 40) || item.skip || 'Team';
   item.third = cleanText(input.third, 40);
@@ -675,6 +676,20 @@ function saveTeam(body) {
     if (!slot) return;
     putTeam(game, slot, item);
     writeRow('Games', game._row, game);
+  });
+  // Hand-made draws linked to the bonspiel hold team names, so a game with the team's old or new name follows it too.
+  var key = function (name) { return String(name).trim().toLowerCase(); };
+  var names = [key(oldName), key(item.name)].filter(Boolean);
+  var linked = readTab('Draws').filter(function (draw) { return String(draw.teamsFrom) === String(input.bonspielId); });
+  gamesOf(linked).forEach(function (game) {
+    var changed = false;
+    [1, 2].forEach(function (slot) {
+      if (names.indexOf(key(game['team' + slot])) < 0) return;
+      game['team' + slot] = item.name;
+      game['logo' + slot] = item.logo;
+      changed = true;
+    });
+    if (changed) writeRow('Games', game._row, game);
   });
   return { id: item.id };
 }

@@ -343,3 +343,16 @@ test('resetting results clears scores, timers, filled games and typed standings,
   assert.equal(api.get({ action: 'draws' }).draws.find((draw) => draw.id === unlinked).games[0].ends.length, 1);
   assert.equal(two, draws()[1].id);
 });
+test('a team\'s new name and logo reach the games of linked hand-made draws', () => {
+  const { api, id, teams } = withBonspiel();
+  const game = { sheet: 1, team1: ' a ', team2: 'Guest', logo1: 'acc', logo2: 'acc' };
+  admin(api, { action: 'saveDraw', draw: { name: 'One-off', teamsFrom: id, games: [game] } });
+  const other = admin(api, { action: 'saveDraw', draw: { name: 'Unlinked', games: [game] } }).id;
+  admin(api, { action: 'saveTeam', team: { id: teams[0], bonspielId: id, name: 'Aces', logo: 'new-logo' } });
+  const linked = api.get({ action: 'bonspiel', id }).linkedDraws[0].games[0];
+  assert.deepEqual([linked.team1, linked.logo1, linked.team2, linked.logo2], ['Aces', 'new-logo', 'Guest', 'acc']);
+  admin(api, { action: 'saveTeam', team: { bonspielId: id, name: 'Guest', logo: 'guest-logo' } });
+  assert.equal(api.get({ action: 'bonspiel', id }).linkedDraws[0].games[0].logo2, 'guest-logo');
+  const unlinked = api.get({ action: 'draws' }).draws.find((draw) => draw.id === other).games[0];
+  assert.deepEqual([unlinked.team1, unlinked.logo1], ['a', 'acc']);
+});
