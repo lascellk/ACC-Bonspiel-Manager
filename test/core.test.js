@@ -22,6 +22,11 @@ test('hammer is worked out end by end, so a corrected end flows through', () => 
 test('totals ignore blank ends', () => {
   assert.deepEqual(totals(game([score(0, 2), blank, score(1, 3), score(0, 1)])), [3, 3]);
 });
+test('unchosen stones are grey and an unchosen hammer is found by the first score', () => {
+  assert.deepEqual([stoneOf(game([], 0, { stone: '' }), 0), stoneOf(game([], 0, { stone: '' }), 1)], ['none', 'none']);
+  const g = game([blank, score(0, 2)], null);
+  assert.deepEqual([0, 1, 2].map((i) => hammerAt(g, i)), [null, null, 1]);
+});
 test('team 2 throws the opposite stone', () => {
   assert.equal(stoneOf(game([], 0, { stone: 'blue' }), 1), 'red');
 });

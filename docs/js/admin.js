@@ -18,7 +18,7 @@ let sourceTeams = []; // Teams of the bonspiel chosen in the draw editor.
 let tvBonspiel = ''; // The bonspiel on the TV, or '' for the scoreboard.
 let spinning = false; // True until the TV has had time to finish the wheels.
 
-const blankGame = (sheet) => ({ sheet, team1: '', team2: '', logo1: '', logo2: '', stone: 'red', hammer: 0 });
+const blankGame = (sheet) => ({ sheet, team1: '', team2: '', logo1: '', logo2: '', stone: '', hammer: null });
 const blankDraw = () => ({
   id: '', name: `Draw ${draws.length + 1}`, date: new Date().toLocaleDateString('en-CA'), startsAt: '', teamsFrom: '', ends: 8, minutes: 95, showTimer: true,
   games: [1, 2, 3, 4].map(blankGame),
@@ -78,11 +78,11 @@ function gameFields(game) {
     ${team(1)}${team(2)}
     <div class="choice-row">
       <span class="choice"><b>Team 1 stones</b>
-        <label><input type="radio" name="stone-${s}" value="red" ${game.stone !== 'blue' ? 'checked' : ''}> Red</label>
+        <label><input type="radio" name="stone-${s}" value="red" ${game.stone === 'red' ? 'checked' : ''}> Red</label>
         <label><input type="radio" name="stone-${s}" value="blue" ${game.stone === 'blue' ? 'checked' : ''}> Blue</label>
       </span>
       <span class="choice"><b>Hammer, end 1</b>
-        <label><input type="radio" name="hammer-${s}" value="0" ${game.hammer !== 1 ? 'checked' : ''}> Team 1</label>
+        <label><input type="radio" name="hammer-${s}" value="0" ${game.hammer === 0 ? 'checked' : ''}> Team 1</label>
         <label><input type="radio" name="hammer-${s}" value="1" ${game.hammer === 1 ? 'checked' : ''}> Team 2</label>
       </span>
     </div>
@@ -148,8 +148,8 @@ function readEditor(form) {
       team2: data.get(`team2-${sheet}`),
       logo1: data.get(`logo1-${sheet}`),
       logo2: data.get(`logo2-${sheet}`),
-      stone: data.get(`stone-${sheet}`),
-      hammer: Number(data.get(`hammer-${sheet}`)),
+      stone: data.get(`stone-${sheet}`) || '',
+      hammer: data.has(`hammer-${sheet}`) ? Number(data.get(`hammer-${sheet}`)) : null,
     })),
   };
 }

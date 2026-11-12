@@ -179,7 +179,7 @@ function toGame(row) {
   return {
     sheet: Number(row.sheet), team1: String(row.team1), logo1: String(row.logo1),
     team2: String(row.team2), logo2: String(row.logo2), stone: String(row.stone1),
-    hammer: Number(row.hammer), ends: JSON.parse(row.ends || '[]'), final: String(row.final) === 'true',
+    hammer: row.hammer === '' ? null : Number(row.hammer), ends: JSON.parse(row.ends || '[]'), final: String(row.final) === 'true',
     gameId: String(row.gameId), team1Id: String(row.team1Id), team2Id: String(row.team2Id),
     phase: String(row.phase), bracket: String(row.bracket), source1: String(row.source1), source2: String(row.source2)
   };
@@ -276,8 +276,9 @@ function saveDraw(body) {
       next.logo1 = cleanText(game.logo1, 40);
       next.logo2 = cleanText(game.logo2, 40);
     }
-    next.stone1 = game.stone === 'blue' ? 'blue' : 'red';
-    next.hammer = Number(game.hammer) === 1 ? 1 : 0;
+    // Either can be left unchosen until the wheels or the scorer decide.
+    next.stone1 = ['red', 'blue'].indexOf(game.stone) >= 0 ? game.stone : '';
+    next.hammer = game.hammer === 0 || game.hammer === 1 ? game.hammer : '';
     if (current) writeRow('Games', current._row, next); else appendRow('Games', next);
   }
   // Only the very first draw goes live by itself, so a draw taken off live stays off when one is edited.
@@ -445,9 +446,10 @@ function setEnd(body) {
   writeRow('Games', row._row, row);
 }
 
+// body.hammer gives the hammer to team 0 or 1. Without it, the hammer goes to the other team.
 function swapHammer(body) {
   var row = findGame(body.drawId, body.sheet);
-  row.hammer = Number(row.hammer) === 1 ? 0 : 1;
+  row.hammer = body.hammer === 0 || body.hammer === 1 ? body.hammer : Number(row.hammer) === 1 ? 0 : 1;
   writeRow('Games', row._row, row);
 }
 

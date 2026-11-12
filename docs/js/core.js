@@ -5,7 +5,7 @@ export const WARNING_MS = 10 * 60000;
 
 export const otherTeam = (team) => (team === 0 ? 1 : 0);
 
-// The team that scores gives up the hammer. A blank end keeps it where it was.
+// The team that scores gives up the hammer. A blank end keeps it where it was. Null until it is known.
 export function hammerAt(game, endIndex) {
   let hammer = game.hammer;
   game.ends.slice(0, endIndex).forEach((end) => {
@@ -25,6 +25,7 @@ export function totals(game) {
 }
 
 export const stoneOf = (game, team) => {
+  if (game.stone !== 'red' && game.stone !== 'blue') return 'none';
   const other = game.stone === 'red' ? 'blue' : 'red';
   return team === 0 ? game.stone : other;
 };

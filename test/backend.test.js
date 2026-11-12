@@ -131,3 +131,14 @@ test('logos must be small images', () => {
   assert.equal(admin(api, { action: 'saveLogo', name: 'x', data: good + 'A'.repeat(50000) }).ok, false);
   assert.equal(api.get({ action: 'logos' }).logos.length, 1);
 });
+test('stones and hammer can be left unchosen, then set by the scorer', () => {
+  const api = loadBackend();
+  const blank = games.map((game) => ({ ...game, stone: '', hammer: null }));
+  const { id } = admin(api, { action: 'saveDraw', draw: { name: 'Draw 1', minutes: 95, ends: 8, games: blank } });
+  assert.deepEqual(api.get().draw.games.map((game) => [game.stone, game.hammer]), [['', null], ['', null], ['', null], ['', null]]);
+  scorer(api, { action: 'swapHammer', drawId: id, sheet: 1, hammer: 1 });
+  scorer(api, { action: 'swapHammer', drawId: id, sheet: 2, hammer: 0 });
+  assert.deepEqual(api.get().draw.games.slice(0, 3).map((game) => game.hammer), [1, 0, null]);
+  admin(api, { action: 'saveDraw', draw: { id, name: 'Draw 1', minutes: 95, ends: 8, games: blank.map((game) => (game.sheet === 3 ? { ...game, stone: 'blue', hammer: 0 } : game)) } });
+  assert.deepEqual([api.get().draw.games[2].stone, api.get().draw.games[2].hammer], ['blue', 0]);
+});

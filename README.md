@@ -20,7 +20,7 @@ Bonspiels and a four-sheet curling scoreboard for the Almonte Curling Club. An o
 
 Unticking **Show timer** on a draw hides the countdown and the **Start draw** button on the TV and scoring pages. The admin page still shows the timer.
 
-The hammer is worked out from the ends: the team that scores gives up the hammer, and a blank end leaves it where it was. Correcting an earlier end updates everything after it. **Swap hammer** flips who started with it, for when the setup was wrong.
+The hammer is worked out from the ends: the team that scores gives up the hammer, and a blank end leaves it where it was. Correcting an earlier end updates everything after it. **Swap hammer** flips who started with it, for when the setup was wrong. A new hand-made draw starts with no stone colour or hammer chosen, and can be saved that way: those stones show grey, and no team has the hammer until it is chosen in the draw, by the wheels, or on the scoring page, where **Swap hammer** becomes a button for each team. The first scored end also settles it.
 
 If a tied game needs an extra end, keep scoring: the line score grows by itself. **Finish game** stops a sheet early and removes its hammer.
 

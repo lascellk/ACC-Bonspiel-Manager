@@ -72,13 +72,15 @@ function renderDialog() {
       <button class="close" aria-label="Close">×</button>
     </header>
     ${scoringOpen ? `
-      <p class="hammer-line">${HAMMER_ICON} ${esc(teamName(game, hammerAt(game, index)))} ${editing ? 'had' : 'has'} the hammer${was ? ` · recorded: ${esc(was)}` : ''}</p>
+      <p class="hammer-line">${HAMMER_ICON} ${hammerAt(game, index) === null ? 'Hammer not chosen' : `${esc(teamName(game, hammerAt(game, index)))} ${editing ? 'had' : 'has'} the hammer`}${was ? ` · recorded: ${esc(was)}` : ''}</p>
       <div class="score-columns">${column(0)}${column(1)}</div>
       <button type="button" class="wide" data-blank>Blank end (nobody scored)</button>` : ''}
     ${game.ends.length ? `<div class="chips"><span>Ends so far, tap to correct:</span>${endChips}${editing ? `<button type="button" class="chip" data-edit="">Back</button>` : ''}</div>` : ''}
     <footer>
       <button type="button" data-undo ${game.ends.length ? '' : 'disabled'}>Undo last end</button>
-      <button type="button" data-swap>Swap hammer</button>
+      ${game.hammer === null
+        ? [0, 1].map((team) => `<button type="button" data-swap data-hammer="${team}">${esc(teamName(game, team))} has hammer</button>`).join('')
+        : '<button type="button" data-swap>Swap hammer</button>'}
       <button type="button" data-final>${game.final ? 'Reopen game' : 'Finish game'}</button>
     </footer>
   </form>`;
@@ -144,8 +146,8 @@ $('#end-dialog').addEventListener('click', (event) => {
   } else if ('undo' in data) {
     if (confirm(`Remove end ${game.ends.length} from Sheet ${game.sheet}?`)) saveEnd(game, game.ends.length - 1, null);
   } else if ('swap' in data) {
-    game.hammer = game.hammer === 1 ? 0 : 1;
-    run('swapHammer', { drawId: draw.id, sheet: game.sheet });
+    game.hammer = data.hammer ? Number(data.hammer) : game.hammer === 1 ? 0 : 1;
+    run('swapHammer', { drawId: draw.id, sheet: game.sheet, hammer: game.hammer });
     render();
   } else if ('final' in data) {
     game.final = !game.final;
