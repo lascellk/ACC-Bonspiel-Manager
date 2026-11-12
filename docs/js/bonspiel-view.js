@@ -69,7 +69,7 @@ export function standingsHtml(data) {
       <tbody>${rows.map((row) => {
         flagged = flagged || (row.unresolved && row.played > 0);
         return `<tr>
-          <td>${row.rank}${row.unresolved && row.played > 0 ? '*' : ''}</td><td class="left">${esc(row.team.name)}</td><td>${row.played}</td>
+          <td>${row.rank}${row.unresolved && row.played > 0 ? '*' : ''}</td><td class="left"><span class="standing-team">${logoHtml(row.team.logo, row.team.name)}${esc(row.team.name)}</span></td><td>${row.played}</td>
           <td>${row.won}</td><td>${row.tied}</td><td>${row.lost}</td>${trackEnds ? `<td>${row.endsWon}</td>` : ''}${scorePoints ? `<td>${row.scored}</td>` : ''}<td><b>${row.points}</b></td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td>
         </tr>`;
       }).join('')}</tbody>
