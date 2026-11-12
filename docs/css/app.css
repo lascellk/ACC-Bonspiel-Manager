@@ -329,8 +329,9 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 .standings th, .standings td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: center; }
 .standings th { color: var(--muted); font-size: 12px; font-weight: 600; }
 .standings .left { text-align: left; }
-.standing-team { display: flex; align-items: center; gap: 8px; }
-.standing-team .logo { width: 24px; height: 24px; font-size: 10px; }
+.standing-team { display: flex; align-items: center; gap: 6px; }
+.standing-team .logo { width: 22px; height: 22px; font-size: 9px; }
+.standings tbody td { padding-block: 4px; }
 #standings-form { min-width: 0; }
 .edit-standings th, .edit-standings td { padding: 4px 2px; }
 .edit-standings input { width: 3.2em; min-width: 0; padding: 6px 2px; text-align: center; -moz-appearance: textfield; }
