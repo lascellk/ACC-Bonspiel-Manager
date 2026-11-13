@@ -1,0 +1,3 @@
+const {chromium}=require('playwright');const fs=require('fs');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:160,height:160}});
+for(const f of fs.readdirSync('svg')){await p.setContent(`<html><body style="margin:0;background:transparent">${fs.readFileSync('svg/'+f,'utf8').replace('width="200" height="200"','width="160" height="160"')}</body></html>`);await p.screenshot({path:'png/'+f.replace('.svg','.png').replace(/_/g,' '),omitBackground:true,clip:{x:0,y:0,width:160,height:160}});}
+await b.close();})();

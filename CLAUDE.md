@@ -33,3 +33,11 @@ Keep this file up to date without being asked. As work goes on, add any decision
 
 - This app is separate from the live ACC Scoreboard. Never change that app's Sheet, backend, site or Cast app.
 - The PIN storage key is `acc-bonspiel-pin`, because both sites share the `lascellk.github.io` browser storage.
+
+## Team logos
+
+- `make.py` and `png.js` stay in `dev/logos/`, not in `docs/`, because `docs/` is published. Their output (`svg/`, `png/`, `logos.json`, `sheet.html`) isn't committed.
+- The 2026 Turkey Spiel team logos (bonspiel id `6b14b0b9`) are drawn as SVG by `dev/logos/make.py` and turned into 160 px PNGs by `dev/logos/png.js`. Run `python3 make.py && node png.js` from `dev/logos/`. This needs Playwright (`npm i playwright`), which the app itself doesn't use.
+- The logos were uploaded from the admin page with `saveLogo` and then given to each team with `saveTeam`. In the shared Logos list, each logo is named after its team.
+- To change a logo's image, upload the new image, point the team at it, and then delete the old logo. There is no action that replaces a logo's image.
+- Grinch Squad is the user's own team. Its logo is an original design (a green stone in a Santa hat carrying a sack of stolen stones), not the Dr. Seuss character, and any changes should keep it that way.
