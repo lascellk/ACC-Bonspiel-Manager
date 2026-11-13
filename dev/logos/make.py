@@ -99,17 +99,24 @@ L['Button Bandits'] = badge('#6b3fa0',
     house(100, 160, 30) +
     f'<path d="M66,148 Q74,136 84,146 M134,148 Q126,136 116,146" fill="#9aa1ad" stroke="{INK}" stroke-width="4" stroke-linecap="round"/>')
 
-# 6 Sheet Show
-L['Sheet Show'] = badge('#7a1f5c',
-    '<path d="M86,16 L114,16 L160,180 L40,180 Z" fill="#ffe9a8" opacity="0.45"/>' +
-    '<ellipse cx="100" cy="164" rx="70" ry="14" fill="#ffe9a8" opacity="0.6"/>' +
-    stone(100, 140, 1.0, None) +
-    eyes(86, 114, 132, 6, 0) +
-    f'<path d="M90,146 Q100,154 110,146" fill="none" stroke="{INK}" stroke-width="3" stroke-linecap="round"/>'
-    f'<rect x="60" y="102" width="80" height="10" rx="4" fill="{INK}"/>'
-    f'<rect x="74" y="58" width="52" height="48" rx="4" fill="{INK}"/>'
-    '<rect x="74" y="92" width="52" height="8" fill="#d6262b"/>' +
-    stars([(42, 70, 1.2), (160, 66, 1.0), (150, 110, 0.7), (48, 118, 0.6)]))
+# 6 Miss Your Toe (mistletoe over a curling shoe, with a stone just missing the toe)
+def leaf(x, y, ang):
+    return (f'<g transform="translate({x},{y}) rotate({ang})">'
+            f'<path d="M0,0 Q10,-10 0,-34 Q-10,-10 0,0 Z" fill="#3f9b4a" stroke="{INK}" stroke-width="3" stroke-linejoin="round"/>'
+            '<path d="M0,-4 L0,-28" stroke="#2c7436" stroke-width="2"/></g>')
+L['Miss Your Toe'] = badge('#7a1f5c',
+    f'<line x1="100" y1="14" x2="100" y2="44" stroke="{INK}" stroke-width="3"/>' +
+    leaf(96, 50, -125) + leaf(97, 52, -160) + leaf(103, 52, 160) + leaf(104, 50, 125) +
+    ''.join(f'<circle cx="{x}" cy="{y}" r="5.5" fill="#fff" stroke="{INK}" stroke-width="2.5"/>' for x, y in ((91, 62), (100, 67), (109, 62))) +
+    f'<path d="M100,48 L82,38 L82,58 Z M100,48 L118,38 L118,58 Z" fill="#d6262b" stroke="{INK}" stroke-width="3" stroke-linejoin="round"/>'
+    f'<circle cx="100" cy="48" r="6" fill="#d6262b" stroke="{INK}" stroke-width="3"/>'
+    '<ellipse cx="100" cy="162" rx="76" ry="12" fill="#ffe9a8" opacity="0.35"/>'
+    f'<path d="M34,154 L34,124 Q34,112 46,112 L62,112 Q68,128 92,134 Q108,138 108,154 Z" fill="#f4f4f4" stroke="{INK}" stroke-width="4" stroke-linejoin="round"/>'
+    '<path d="M48,124 L64,124" stroke="#d6262b" stroke-width="5" stroke-linecap="round"/>'
+    f'<rect x="30" y="152" width="82" height="10" rx="5" fill="{INK}"/>' +
+    stone(140, 140, 0.6, '#f2c230') +
+    '<g stroke="#ffe9a8" stroke-width="4" stroke-linecap="round"><line x1="170" y1="128" x2="182" y2="128"/><line x1="172" y1="142" x2="184" y2="142"/></g>' +
+    stars([(112, 118, 0.9), (118, 102, 0.55)], '#ffe27a'))
 
 # 7 Naughty Sweepers
 def horns(x, y, ang):
@@ -153,19 +160,19 @@ L['Sweep Dreams'] = badge('#1b2a55',
     '<text x="128" y="96" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="18" fill="#fff">z</text>'
     '<text x="140" y="80" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="24" fill="#fff">Z</text>')
 
-# 11 Slippery Sliders
-L['Slippery Sliders'] = badge('#9fdcf2',
-    '<path d="M16,150 L184,150" stroke="#fff" stroke-width="30"/>'
-    '<g stroke="#4f9fc9" stroke-width="5" stroke-linecap="round"><line x1="20" y1="104" x2="50" y2="104"/><line x1="16" y1="122" x2="44" y2="122"/><line x1="24" y1="140" x2="46" y2="140"/></g>'
-    f'<ellipse cx="104" cy="122" rx="56" ry="26" fill="{INK}"/>'
-    '<ellipse cx="108" cy="132" rx="44" ry="14" fill="#fff"/>'
-    f'<circle cx="152" cy="104" r="22" fill="{INK}"/>'
-    '<circle cx="158" cy="98" r="6" fill="#fff"/><circle cx="160" cy="98" r="3" fill="#16202e"/>'
-    f'<path d="M170,104 L190,110 L170,114 Z" fill="#f29a1f" stroke="{INK}" stroke-width="2"/>'
-    f'<path d="M50,118 L34,106 L38,124 Z" fill="#f29a1f" stroke="{INK}" stroke-width="2"/>'
-    f'<path d="M96,104 Q80,84 70,96" fill="none" stroke="{INK}" stroke-width="9" stroke-linecap="round"/>'
-    f'<path d="M100,72 L104,54 M86,70 L82,58" stroke="{INK}" stroke-width="0"/>'
-    '<path d="M126,98 Q140,84 156,86" fill="none" stroke="#d6262b" stroke-width="7" stroke-linecap="round"/>')
+# 11 Runny Rudolph (a stone with antlers, a glowing red nose and a drip)
+L['Runny Rudolph'] = badge('#9fdcf2',
+    '<path d="M16,156 L184,156" stroke="#fff" stroke-width="26"/>'
+    f'<g fill="none" stroke="{INK}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"><path d="M76,104 Q64,72 54,52 M66,82 L44,78 M60,66 L68,46"/><path d="M124,104 Q136,72 146,52 M134,82 L156,78 M140,66 L132,46"/></g>'
+    '<g fill="none" stroke="#a8763e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M76,104 Q64,72 54,52 M66,82 L44,78 M60,66 L68,46"/><path d="M124,104 Q136,72 146,52 M134,82 L156,78 M140,66 L132,46"/></g>' +
+    stone(100, 132, 1.2, None) +
+    eyes(84, 116, 116, 8, 0) +
+    f'<path d="M74,104 Q84,98 94,104 M106,104 Q116,98 126,104" fill="none" stroke="{INK}" stroke-width="3" stroke-linecap="round"/>'
+    '<circle cx="100" cy="134" r="22" fill="#ff5a5f" opacity="0.35"/>'
+    f'<circle cx="100" cy="134" r="13" fill="#e0242b" stroke="{INK}" stroke-width="3"/>'
+    '<circle cx="95" cy="129" r="4" fill="#ffb3b5"/>'
+    f'<path d="M110,144 Q118,158 112,166 Q104,170 102,162 Q102,154 110,144 Z" fill="#7fd3ff" stroke="{INK}" stroke-width="3" stroke-linejoin="round"/>'
+    '<circle cx="107" cy="160" r="2.5" fill="#fff"/>')
 
 # 12 Reindeer Rebels
 L['Reindeer Rebels'] = badge('#17565a',
