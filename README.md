@@ -122,7 +122,7 @@ The Cast app is published, so it runs on any Cast device without registering tes
 - **Receiver Application URL:** `https://lascellk.github.io/ACC-Bonspiel-Manager/tv.html?cast=1`
 - Put the Application ID in `CAST_APP_ID` in `docs/js/config.js`.
 
-**TV shows** on the admin page switches the TV between the scoreboard and a bonspiel's public page, within about 5 seconds and without restarting the cast. The bonspiel page moves through its tabs by itself, and slowly scrolls any tab too long for the screen. The TV stays on your choice until you change it, including when a draw goes live.
+**TV shows** on the admin page switches the TV between the scoreboard, a bonspiel's public page and an ad-hoc draw's results, within about 5 seconds and without restarting the cast. The bonspiel page moves through its tabs by itself, and slowly scrolls any tab too long for the screen. The TV stays on your choice until you change it, including when a draw goes live.
 
 The Cast icon is at the top of the admin page. If casting can't start, tapping it says why. The scoring page has only score entry, with no Cast, TV or Admin links.
 
