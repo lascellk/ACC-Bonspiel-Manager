@@ -26,6 +26,8 @@ The hammer is worked out from the ends: the team that scores gives up the hammer
 
 If a tied game needs an extra end, keep scoring: the line score grows by itself. **Finish game** stops a sheet early and removes its hammer.
 
+**Finish draw** at the bottom of the scoring page makes every game with an end scored final, resets the timer and clears the rink clock. A sheet with no ends scored stays open, so an unplayed game never counts as a 0-0 tie, and so does a tied playoff game. The page lists any sheet it left open.
+
 ## Running a bonspiel
 
 The four steps on `bonspiel.html`:

@@ -91,3 +91,10 @@ test('reset all results takes a used draw off the rink clock', () => {
   assert.equal(api.fetches.length, 1);
   assert.equal(last(api).arg.status, 'idle');
 });
+
+test('finish draw takes the draw off the rink clock', () => {
+  const { api, id, timer } = withLinkedDraw();
+  timer('start');
+  scorer(api, { action: 'finishDraw', id });
+  assert.equal(last(api).arg.status, 'idle');
+});

@@ -28,6 +28,7 @@ var ACTIONS = {
   setEnd: { role: 'score', fn: setEnd },
   swapHammer: { role: 'score', fn: swapHammer },
   setFinal: { role: 'score', fn: setFinal },
+  finishDraw: { role: 'score', fn: finishDraw },
   saveDraw: { role: 'admin', fn: saveDraw },
   deleteDraw: { role: 'admin', fn: deleteDraw },
   goLive: { role: 'admin', fn: goLive },
@@ -515,6 +516,27 @@ function setFinal(body) {
   row.final = final;
   writeRow('Games', row._row, row);
   if (final && isElimination(row)) fillLaterSlots(row);
+}
+
+// Finish draw on the scoring page: every game with at least one end scored becomes final, then the timer is
+// reset, which also takes the draw off the rink clock. A game with no ends, or one that can't finish (a tied
+// playoff game), stays open and is listed in skipped, so an unplayed sheet never counts as a 0-0 tie.
+function finishDraw(body) {
+  var draw = findDraw(body.id);
+  var skipped = [];
+  readTab('Games').filter(function (game) {
+    return String(game.drawId) === String(draw.id) && String(game.final) !== 'true' && (game.team1 || game.team2);
+  }).sort(function (a, b) { return Number(a.sheet) - Number(b.sheet); }).forEach(function (game) {
+    var sheet = Number(game.sheet);
+    if (!JSON.parse(game.ends || '[]').length) { skipped.push({ sheet: sheet, reason: 'no ends scored' }); return; }
+    try {
+      setFinal({ drawId: draw.id, sheet: sheet, final: true });
+    } catch (err) {
+      skipped.push({ sheet: sheet, reason: err.message });
+    }
+  });
+  timerAction({ id: draw.id, op: 'reset' });
+  return { skipped: skipped };
 }
 
 // ----- Filling later games. A source is W:<gameId>, L:<gameId>, S:<seed> or P:<round>:<slot>.

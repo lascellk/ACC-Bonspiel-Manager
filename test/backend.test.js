@@ -142,3 +142,16 @@ test('stones and hammer can be left unchosen, then set by the scorer', () => {
   admin(api, { action: 'saveDraw', draw: { id, name: 'Draw 1', minutes: 95, ends: 8, games: blank.map((game) => (game.sheet === 3 ? { ...game, stone: 'blue', hammer: 0 } : game)) } });
   assert.deepEqual([api.get().draw.games[2].stone, api.get().draw.games[2].hammer], ['blue', 0]);
 });
+
+test('finish draw finishes the games with ends, leaves unplayed sheets open and resets the timer', () => {
+  const { api, id } = withDraw();
+  scorer(api, { action: 'timer', id, op: 'start' });
+  [1, 2, 3].forEach((sheet) => scorer(api, { action: 'setEnd', drawId: id, sheet, index: 0, end: { team: 0, pts: sheet } }));
+  scorer(api, { action: 'setFinal', drawId: id, sheet: 3, final: true });
+  const result = scorer(api, { action: 'finishDraw', id });
+  assert.deepEqual(result.skipped, [{ sheet: 4, reason: 'no ends scored' }]);
+  const { draw } = api.get();
+  assert.deepEqual(draw.games.map((game) => game.final), [true, true, true, false]);
+  assert.equal(draw.startedAt, 0);
+  assert.equal(draw.leftMs, 95 * 60000);
+});

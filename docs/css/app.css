@@ -180,6 +180,7 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
   font-weight: 400;
 }
 .sheet-empty { opacity: .6; }
+.finish-draw { justify-self: center; min-width: 200px; margin-top: 8px; border-color: var(--navy-2); font-weight: 700; }
 .sheet-title { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
 .sheet-title b { color: var(--ink); }
 .team {

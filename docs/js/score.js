@@ -35,7 +35,7 @@ function renderSheets() {
       <span class="sheet-title"><b>Sheet ${game.sheet}</b><span>${hasTeams(game) ? status : 'No game'}</span></span>
       ${hasTeams(game) ? endHeader(columns, game) + teamRow(game, 0, columns) + teamRow(game, 1, columns) : ''}
     </button>`;
-  }).join('');
+  }).join('') + (draw.games.some(hasTeams) ? '<button id="finish-draw" class="finish-draw" type="button">Finish draw</button>' : '');
 }
 
 const pointsGrid = (game, team) => `<div class="points" style="--team:var(--${stoneOf(game, team)})">
@@ -120,6 +120,7 @@ function closeDialog() {
 }
 
 $('#sheets').addEventListener('click', (event) => {
+  if (event.target.id === 'finish-draw') return finishDraw();
   const card = event.target.closest('[data-sheet]');
   if (!card) return;
   openSheet = Number(card.dataset.sheet);
@@ -160,6 +161,22 @@ $('#end-dialog').addEventListener('close', () => {
   openSheet = null;
   editIndex = null;
 });
+
+// Every game with an end scored becomes final, the timer goes back to full time, and the rink clock is cleared.
+async function finishDraw() {
+  if (!confirm('Finish the draw? Every game with ends scored becomes final, the timer is reset and the rink clock is cleared.')) return;
+  const id = draw.id;
+  draw.games.forEach((game) => { if (hasTeams(game) && game.ends.length) game.final = true; });
+  draw.startedAt = 0;
+  draw.leftMs = draw.minutes * 60000;
+  render();
+  try {
+    const { skipped } = await post('finishDraw', { id });
+    toast(skipped.length ? `Draw finished. Still open: ${skipped.map((item) => `Sheet ${item.sheet} (${item.reason})`).join(', ')}` : 'Draw finished');
+  } catch (error) {
+    toast(`Not saved: ${error.message}`);
+  }
+}
 
 // Back to full time, stopped. The rink clock goes back to its logo too.
 $('#reset-button').addEventListener('click', () => {
