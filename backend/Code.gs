@@ -252,6 +252,7 @@ function saveDraw(body) {
   var minutes = Math.min(Math.max(Number(draw.minutes) || 95, 1), 600);
   var row = draw.id ? findDraw(draw.id) : null;
   var item = row || { id: Utilities.getUuid().slice(0, 8), startedAt: 0, leftMs: minutes * 60000 };
+  var timerWasShown = Boolean(row) && String(row.showTimer) !== 'false';
   if (row && !Number(row.startedAt) && Number(row.leftMs) === Number(row.minutes) * 60000) item.leftMs = minutes * 60000;
   item.name = cleanText(draw.name, 60) || 'Draw';
   item.date = cleanText(draw.date, 10);
@@ -263,6 +264,7 @@ function saveDraw(body) {
   item.teamsFrom = item.bonspielId ? '' : cleanText(draw.teamsFrom, 8);
   if (item.teamsFrom) findBonspiel(item.teamsFrom);
   if (row) writeRow('Draws', row._row, item); else appendRow('Draws', item);
+  if (timerWasShown && !item.showTimer) syncDrawClock(item, 'reset'); // Hiding the timer takes it off the rink clock.
 
   var existing = readTab('Games').filter(function (game) { return String(game.drawId) === String(item.id); });
   for (var sheet = 1; sheet <= 4; sheet++) {
@@ -446,8 +448,10 @@ function testDrawClock() {
 }
 
 // op is the timer action just done: 'start' takes the clock, 'reset' clears it, anything else follows.
+// Show timer decides: a draw with its timer hidden never goes on the rink clock. A reset is always sent, and the
+// Draw Clock ignores it unless it still shows this draw.
 function syncDrawClock(draw, op) {
-  if (!String(draw.bonspielId || '') && !String(draw.teamsFrom || '')) return;
+  if (op !== 'reset' && String(draw.showTimer) === 'false') return;
   var props = PropertiesService.getScriptProperties();
   var url = props.getProperty('DRAW_CLOCK_URL');
   var key = props.getProperty('DRAW_CLOCK_KEY');

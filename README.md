@@ -68,9 +68,9 @@ Rules to know:
 
 ## Rink draw clock
 
-The club's separate ACC Draw Clock (the big countdown on the rink TV) follows bonspiel draws, so the curlers on the ice and the scoreboard TV see the same time.
+The club's separate ACC Draw Clock (the big countdown on the rink TV) follows the scoreboard's draws, so the curlers on the ice and the scoreboard TV see the same time.
 
-- **Start draw** on a bonspiel draw, or on a hand-made draw linked to a bonspiel, puts that draw on the rink clock under its name. A practice draw that isn't linked leaves the rink clock alone.
+- **Start draw** puts the draw on the rink clock under its name, for any draw with **Show timer** ticked: a bonspiel draw, or a hand-made draw for an ad-hoc game. A draw with **Show timer** unticked leaves the rink clock alone, and unticking it on a running draw takes it off the rink clock.
 - Pause, **Start draw** again, adjusting the timer and resetting it all change the rink clock to match, as long as it still shows that draw. If a member starts a league draw on the Draw Clock in the meantime, it is left alone until the next **Start draw** here.
 - **Reset all results** takes the bonspiel's draws off the rink clock.
 - The scoreboard timer and the rink TV both turn yellow at 15 minutes, with no sound. Only the rink TV plays start and time-up sounds.

@@ -46,11 +46,28 @@ test('pause, adjust and reset follow without taking the clock over', () => {
   assert.equal(last(api).arg.status, 'idle');
   assert.equal(last(api).arg.takeOver, false);
 });
-test('a hand-made draw not linked to a bonspiel leaves the rink clock alone', () => {
+test('any draw with Show timer on drives the rink clock, linked to a bonspiel or not', () => {
   const api = loadBackend(clockProps);
   const id = admin(api, { action: 'saveDraw', draw: { name: 'Practice', games: [game] } }).id;
   scorer(api, { action: 'timer', id, op: 'start' });
+  assert.equal(api.fetches.length, 1);
+  assert.equal(last(api).arg.status, 'running');
+});
+test('a draw with its timer hidden leaves the rink clock alone', () => {
+  const api = loadBackend(clockProps);
+  const id = admin(api, { action: 'saveDraw', draw: { name: 'Practice', showTimer: false, games: [game] } }).id;
+  scorer(api, { action: 'timer', id, op: 'start' });
+  scorer(api, { action: 'timer', id, op: 'pause' });
   assert.equal(api.fetches.length, 0);
+});
+test('hiding the timer of a running draw takes it off the rink clock', () => {
+  const { api, id, bonspiel, timer } = withLinkedDraw();
+  timer('start');
+  admin(api, { action: 'saveDraw', draw: { id, name: 'Draw 3', minutes: 95, teamsFrom: bonspiel, showTimer: false, games: [game] } });
+  assert.equal(api.fetches.length, 2);
+  assert.equal(last(api).arg.status, 'idle');
+  timer('pause');
+  assert.equal(api.fetches.length, 2);
 });
 test('without the Draw Clock settings nothing is sent', () => {
   const { api, timer } = withLinkedDraw({ ADMIN_PIN: '1234', SCORE_PIN: '0000' });
