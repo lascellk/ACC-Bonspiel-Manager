@@ -24,7 +24,7 @@ Once a draw has started, the scoring page also has **Reset**, which puts the tim
 
 The hammer is worked out from the ends: the team that scores gives up the hammer, and a blank end leaves it where it was. Correcting an earlier end updates everything after it. **Swap hammer** flips who started with it, for when the setup was wrong. A new hand-made draw starts with no stone colour or hammer chosen, and can be saved that way: those stones show grey, and no team has the hammer until it is chosen in the draw, by the wheels, or on the scoring page, where **Swap hammer** becomes a button for each team. The first scored end also settles it.
 
-If a tied game needs an extra end, keep scoring: the line score grows by itself. **Finish game** stops a sheet early and removes its hammer.
+If a tied game needs an extra end, keep scoring: the line score grows by itself. **Finish game** stops a sheet early and removes its hammer. Finishing a game with no ends scored asks first, because it counts as a 0-0 tie.
 
 **Finish draw** at the bottom of the scoring page makes every game with an end scored final, resets the timer and clears the rink clock. A sheet with no ends scored stays open, so an unplayed game never counts as a 0-0 tie, and so does a tied playoff game. The page lists any sheet it left open.
 

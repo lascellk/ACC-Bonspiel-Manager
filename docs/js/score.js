@@ -151,6 +151,9 @@ $('#end-dialog').addEventListener('click', (event) => {
     run('swapHammer', { drawId: draw.id, sheet: game.sheet, hammer: game.hammer });
     render();
   } else if ('final' in data) {
+    // A game finished with no ends counts as a 0-0 tie in the standings and results, so check first.
+    if (!game.final && !game.ends.length
+      && !confirm(`No ends have been scored on Sheet ${game.sheet}. Finish it anyway? It will count as a 0-0 tie.`)) return;
     game.final = !game.final;
     run('setFinal', { drawId: draw.id, sheet: game.sheet, final: game.final });
     render();
