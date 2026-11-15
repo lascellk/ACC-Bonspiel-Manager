@@ -29,11 +29,10 @@ Keep this file up to date without being asked. As work goes on, add any decision
 
 - On 2026-11-01 about 1 in 3 backend calls hung for 2 minutes, then failed with Google's "server error occurred while reading from storage" (`DEADLINE_EXCEEDED`). The ACC Scoreboard backend was not affected, and a new deployment address hung just as often. The website now retries reads and PIN logins after 10 seconds, but saves can still hang. The user will recheck it as a likely Google problem. If it persists, copying the backend into a new Apps Script project is the next step.
 
-- Rink draw clock link (2026-11-14): code done and tested, waiting for the user to add `DRAW_CLOCK_URL` / `DRAW_CLOCK_KEY` here and `SYNC_KEY` in the Draw Clock, then run `testDrawClock` to approve the external-request permission. Only after that, deploy a new backend version: deploying first would hit the unapproved permission. Remove this line once it is live.
 
 ## Rules
 
-- The rink draw clock is the separate ACC Draw Clock app (`D:\DEV\ACC_Apps\ACC_Draw_Clock`, repo `lascellk/acc-draw-clock`). This app only calls its `sync` command (see `syncDrawClock` in `backend/Code.gs`); both apps must keep working without the other. Never put the key in the repo.
+- The rink draw clock link went live 2026-11-14 (Script Properties `DRAW_CLOCK_URL` and `DRAW_CLOCK_KEY` set, permission approved). The rink draw clock is the separate ACC Draw Clock app (`D:\DEV\ACC_Apps\ACC_Draw_Clock`, repo `lascellk/acc-draw-clock`). This app only calls its `sync` command (see `syncDrawClock` in `backend/Code.gs`); both apps must keep working without the other. Never put the key in the repo.
 - This app is separate from the live ACC Scoreboard. Never change that app's Sheet, backend, site or Cast app.
 - The PIN storage key is `acc-bonspiel-pin`, because both sites share the `lascellk.github.io` browser storage.
 
