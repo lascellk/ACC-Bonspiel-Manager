@@ -450,6 +450,26 @@ export function linkedGames(linkedDraws, teams) {
 
 export const standingGames = ({ draws, linkedDraws = [], teams }) => [...flatGames(draws), ...linkedGames(linkedDraws, teams)];
 
+// ----- Which bonspiel is on
+
+// A bonspiel counts as still on for this many days after its start date, for a weekend event.
+export const RUNNING_DAYS = 3;
+
+// The bonspiel the public page opens by itself (the table sign's QR code has no id): the one whose draw is live on
+// the scoreboard; otherwise the earliest one started in the last few days or still to come; otherwise the most
+// recent. today is 'YYYY-MM-DD' in local time. Null only when there are no bonspiels.
+export function currentBonspiel(bonspiels, liveDraw, today) {
+  if (!bonspiels.length) return null;
+  const owner = liveDraw && [liveDraw.bonspielId, liveDraw.teamsFrom].find((id) => id && bonspiels.some((b) => b.id === id));
+  if (owner) return bonspiels.find((b) => b.id === owner);
+  const dated = bonspiels.filter((b) => /^\d{4}-\d{2}-\d{2}$/.test(b.startDate))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const since = new Date(`${today}T00:00:00Z`);
+  since.setUTCDate(since.getUTCDate() - RUNNING_DAYS);
+  const from = since.toISOString().slice(0, 10);
+  return dated.find((b) => b.startDate >= from) || dated[dated.length - 1] || bonspiels[0];
+}
+
 function parseBracket(label) {
   if (label === 'F') return { letter: 'F', round: 1, position: 1 };
   const match = /^([RWL])(\d+)\.(\d+)$/.exec(label);

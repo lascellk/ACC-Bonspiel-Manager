@@ -52,6 +52,7 @@ Rules to know:
 - The Run step lists the bonspiel's own draws, then its linked hand-made draws in order of date and **Start time**, each with **Make live**.
 - **Edit standings** on the Run step shows each number worked out from the games in its box. Type a number to replace it, or empty the box to go back to the games. **Use the games for all** removes every typed number. Typed numbers show on the public page and set the order: teams rank on the typed points, then head-to-head, then the typed difference. They also count when seeding the next round or the playoffs, and they stay as typed when more games finish.
 - **Reset all results** in the standings editor deletes every score and final in the bonspiel and its linked hand-made draws, restarts their timers, empties games that were filled from results or seeds, and removes typed standings. Teams, the schedule, stones and hammer stay. It can't be undone.
+- The public page opened with no bonspiel chosen (`event.html`, the link on the table sign) shows the bonspiel that's on: the one whose draw is live on the scoreboard, otherwise the earliest that started in the last 3 days or is still to come, otherwise the most recent. **All bonspiels** at the top lists them all, newest first.
 - The public Schedule tab shows the bonspiel's saved schedule if it has one. If not, it shows the hand-made draws linked to that bonspiel, in order of date and **Start time**.
 - On `admin.html`, a bonspiel draw can have its stones, hammer and timer changed, but not its teams, and it can't be deleted there.
 
@@ -111,7 +112,7 @@ The Cast app is published, so it runs on any Cast device without registering tes
 
 **TV shows** on the admin page switches the TV between the scoreboard and a bonspiel's public page, within about 5 seconds and without restarting the cast. The bonspiel page moves through its tabs by itself, and slowly scrolls any tab too long for the screen. The TV stays on your choice until you change it, including when a draw goes live.
 
-The Cast icon is at the top of the scoring and admin pages. If casting can't start, tapping it says why.
+The Cast icon is at the top of the admin page. If casting can't start, tapping it says why. The scoring page has only score entry, with no Cast, TV or Admin links.
 
 Casting from a web page works in Chrome on Android and computers, but not on iPhones or iPads. An iPhone user can still score, and someone with Android or a computer starts the cast. Until the Cast app is registered, open `tv.html` in Chrome on a computer and use Chrome's **Cast tab**.
 

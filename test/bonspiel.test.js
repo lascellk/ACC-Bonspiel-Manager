@@ -298,3 +298,28 @@ test('playoff seeds take pool winners first', () => {
   assert.deepEqual(teamIds, ['t3', 't1']);
   assert.equal(tied, false);
 });
+
+test('the public page opens the bonspiel that is on', async () => {
+  const { currentBonspiel } = await import('../docs/js/bonspiel.js');
+  const old = { id: 'old', startDate: '2025-11-22' };
+  const turkey = { id: 'turkey', startDate: '2026-11-21' };
+  const spring = { id: 'spring', startDate: '2027-03-06' };
+  const all = [spring, old, turkey];
+  assert.equal(currentBonspiel([], null, '2026-11-14'), null);
+  assert.equal(currentBonspiel([old], null, '2026-11-14'), old);
+  // A live draw wins, whether it belongs to the bonspiel or is a hand-made draw linked to it.
+  assert.equal(currentBonspiel(all, { bonspielId: 'spring', teamsFrom: '' }, '2026-11-21'), spring);
+  assert.equal(currentBonspiel(all, { bonspielId: '', teamsFrom: 'old' }, '2026-11-21'), old);
+  // A live practice draw, or one from a deleted bonspiel, falls back to the dates.
+  assert.equal(currentBonspiel(all, { bonspielId: '', teamsFrom: '' }, '2026-11-14'), turkey);
+  assert.equal(currentBonspiel(all, { bonspielId: 'gone', teamsFrom: '' }, '2026-11-14'), turkey);
+  // The next one to come, still the weekend one on its second day, then the next once it is over.
+  assert.equal(currentBonspiel(all, null, '2026-11-14'), turkey);
+  assert.equal(currentBonspiel(all, null, '2026-11-22'), turkey);
+  assert.equal(currentBonspiel(all, null, '2026-11-25'), spring);
+  // After the last one, the most recent.
+  assert.equal(currentBonspiel(all, null, '2027-06-01'), spring);
+  // Undated bonspiels only when nothing has a date.
+  assert.equal(currentBonspiel([{ id: 'x', startDate: '' }, turkey], null, '2027-06-01'), turkey);
+  assert.equal(currentBonspiel([{ id: 'x', startDate: '' }], null, '2027-06-01').id, 'x');
+});

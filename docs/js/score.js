@@ -1,7 +1,6 @@
 // Score entry page: all four sheets, the draw timer, and end-by-end scoring.
 import { drawTitle, hammerAt, hasTeams, MAX_POINTS, stoneOf, teamName, timerPhase, totals } from './core.js';
 import { configured, post, serverNow, watch } from './api.js';
-import { setupCast } from './cast.js';
 import { endHeader, esc, HAMMER_ICON, lineColumns, notConfiguredNotice, paintClock, requirePin, stoneIcon, teamRow, toast, loadLogos } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -177,7 +176,6 @@ $('#timer-button').addEventListener('click', () => {
 
 async function start() {
   if (!configured) return notConfiguredNotice();
-  setupCast($('#cast-button'));
   await requirePin('score', 'Score entry');
   await loadLogos().catch(() => {});
   watch(

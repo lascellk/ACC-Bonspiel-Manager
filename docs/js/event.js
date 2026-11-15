@@ -1,7 +1,7 @@
 // Public event page: schedule, live and final scores, standings, brackets and teams. No PIN.
 // With ?tv=1 it fills a TV and moves through its tabs by itself.
 import { configured, get } from './api.js';
-import { FORMATS } from './bonspiel.js';
+import { currentBonspiel, FORMATS } from './bonspiel.js';
 import { bracketHtml, linkedSchedule, scheduleHtml, standingsHtml, teamsHtml } from './bonspiel-view.js';
 import { esc, loadLogos, notConfiguredNotice, toast } from './view.js';
 
@@ -68,7 +68,8 @@ async function rotateTabs() {
 }
 
 function renderList(bonspiels) {
-  $('#content').innerHTML = `<section class="panel"><h2>Bonspiels</h2>${bonspiels.length ? `<div class="draw-list">${bonspiels.map((item) => `<article class="draw-card">
+  const newestFirst = [...bonspiels].sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)));
+  $('#content').innerHTML = `<section class="panel"><h2>Bonspiels</h2>${bonspiels.length ? `<div class="draw-list">${newestFirst.map((item) => `<article class="draw-card">
     <h3><a href="event.html?id=${esc(item.id)}">${esc(item.name)}</a></h3>
     <p>${esc(item.startDate)} · ${esc(FORMATS[item.format] || '')}</p>
   </article>`).join('')}</div>` : '<p class="empty">No bonspiels yet.</p>'}</section>`;
@@ -101,14 +102,18 @@ $('#tabs').addEventListener('click', (event) => {
 async function start() {
   if (!configured) return notConfiguredNotice();
   await loadLogos().catch(() => {});
-  const id = new URLSearchParams(location.search).get('id');
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
   if (!id) {
-    const { bonspiels } = await get('bonspiels');
-    if (bonspiels.length !== 1) return renderList(bonspiels);
-    return location.replace(`event.html?id=${bonspiels[0].id}`);
+    // The table sign links here with no id: open the bonspiel that's on. ?list=1 shows them all.
+    const [{ bonspiels }, live] = await Promise.all([get('bonspiels'), get()]);
+    const current = params.has('list') ? null : currentBonspiel(bonspiels, live.draw, new Date().toLocaleDateString('en-CA'));
+    if (!current) return renderList(bonspiels);
+    return location.replace(`event.html?id=${current.id}`);
   }
-  const onTv = new URLSearchParams(location.search).has('tv');
+  const onTv = params.has('tv');
   document.body.classList.toggle('event-tv', onTv);
+  $('#all-link').hidden = onTv;
   await refresh(id);
   setInterval(() => refresh(id), POLL_MS);
   if (onTv) rotateTabs();
