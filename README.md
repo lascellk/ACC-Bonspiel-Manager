@@ -64,6 +64,17 @@ Rules to know:
 - A sheet with scores, or without two teams, doesn't spin and keeps its hammer and stones.
 - **Close** puts the TV back. If the admin page is closed first, use **Take the wheels off the TV** under **TV shows**. After 30 minutes the wheels leave by themselves.
 
+## Rink draw clock
+
+The club's separate ACC Draw Clock (the big countdown on the rink TV) follows bonspiel draws, so the curlers on the ice and the scoreboard TV see the same time.
+
+- **Start draw** on a bonspiel draw, or on a hand-made draw linked to a bonspiel, puts that draw on the rink clock under its name. A practice draw that isn't linked leaves the rink clock alone.
+- Pause, **Start draw** again, adjusting the timer and resetting it all change the rink clock to match, as long as it still shows that draw. If a member starts a league draw on the Draw Clock in the meantime, it is left alone until the next **Start draw** here.
+- **Reset all results** takes the bonspiel's draws off the rink clock.
+- The rink TV keeps its own warning (yellow at 15 minutes, silent) and plays its start and time-up sounds.
+- If the Draw Clock can't be reached, the scoreboard timer works as usual. The failure shows under **Executions** in the Apps Script project.
+- On league nights the Draw Clock works on its own, as before.
+
 ## Setup
 
 About 30 minutes, once.
@@ -79,6 +90,8 @@ This app has its own Sheet and Apps Script project, separate from the live ACC S
 2. Open the Apps Script project, choose the `setup` function and click **Run**. Approve the permissions. This creates the `Draws`, `Games`, `Logos`, `Bonspiels` and `Teams` tabs. Run it again after a change that adds columns.
 3. Under **Project Settings → Script properties**, add `ADMIN_PIN` and `SCORE_PIN`. The app refuses every change until they are set.
 4. Click **Deploy → New deployment → Web app**, with *Execute as* **Me** and *Who has access* **Anyone**. Copy the `/exec` address.
+
+5. To link the rink draw clock, add `DRAW_CLOCK_URL` (the Draw Clock's `/exec` address) and `DRAW_CLOCK_KEY` (the same text as `SYNC_KEY` in the Draw Clock's Script properties). Then choose `testDrawClock` and click **Run**: it asks once for permission to connect to an external service and logs whether the Draw Clock accepted the key. Leave both properties unset to keep the clock unlinked.
 
 After changing `Code.gs`, push it, then use **Deploy → Manage deployments → Edit → New version** so the `/exec` address stays the same.
 

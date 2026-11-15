@@ -51,13 +51,24 @@ export function loadBackend(properties = { ADMIN_PIN: '1234', SCORE_PIN: '0000' 
       createTextOutput: (text) => ({ setMimeType() { return text; } }),
     },
     Utilities: { getUuid: () => crypto.randomUUID() },
+    // Records calls to the rink Draw Clock; set fetchReply to change or throw the answer.
+    UrlFetchApp: {
+      fetch: (url, options) => {
+        fetches.push({ url, body: JSON.parse(options.payload) });
+        return { getContentText: () => api.fetchReply() };
+      },
+    },
   });
+  const fetches = [];
   const source = readFileSync(new URL('../backend/Code.gs', import.meta.url), 'utf8');
   vm.runInContext(source, context);
   context.setup();
-  return {
+  const api = {
     tabs,
+    fetches,
+    fetchReply: () => '{"ok":true}',
     get: (parameter = {}) => JSON.parse(context.doGet({ parameter })),
     post: (body) => JSON.parse(context.doPost({ postData: { contents: JSON.stringify(body) } })),
   };
+  return api;
 }

@@ -421,6 +421,54 @@ function timerAction(body) {
   row.startedAt = startedAt;
   row.leftMs = left;
   writeRow('Draws', row._row, row);
+  syncDrawClock(row, body.op);
+}
+
+// ----- Rink draw clock (the separate ACC Draw Clock app on the rink TV)
+// A bonspiel draw, or a hand-made draw linked to a bonspiel, also runs the rink clock: Start draw puts it
+// on the clock, and pause, adjust and reset follow while the clock still shows it (league draws started on
+// the Draw Clock are left alone). Off unless Script Properties hold DRAW_CLOCK_URL (the Draw Clock's /exec
+// address) and DRAW_CLOCK_KEY (its SYNC_KEY). A failed call never stops the scoreboard timer.
+// Run once from the Apps Script editor: approves calling the Draw Clock and checks the address and key.
+function testDrawClock() {
+  var props = PropertiesService.getScriptProperties();
+  var url = props.getProperty('DRAW_CLOCK_URL');
+  if (!url || !props.getProperty('DRAW_CLOCK_KEY')) throw new Error('Set DRAW_CLOCK_URL and DRAW_CLOCK_KEY in Script Properties first');
+  var state = JSON.parse(UrlFetchApp.fetch(url + '?mode=state').getContentText());
+  // A sync for a draw that isn't on the clock changes nothing, so it only checks the key.
+  var res = UrlFetchApp.fetch(url, {
+    method: 'post', contentType: 'text/plain', muteHttpExceptions: true,
+    payload: JSON.stringify({ cmd: 'sync', key: props.getProperty('DRAW_CLOCK_KEY'), arg: { runId: 'bsp-test', status: 'idle' } })
+  });
+  var out = JSON.parse(res.getContentText());
+  if (!out.ok) throw new Error('The Draw Clock answered, but refused the key: ' + out.error);
+  console.log('Draw Clock connected. It shows: ' + (state.status === 'idle' ? 'no draw' : state.label + ' (' + state.status + ')'));
+}
+
+// op is the timer action just done: 'start' takes the clock, 'reset' clears it, anything else follows.
+function syncDrawClock(draw, op) {
+  if (!String(draw.bonspielId || '') && !String(draw.teamsFrom || '')) return;
+  var props = PropertiesService.getScriptProperties();
+  var url = props.getProperty('DRAW_CLOCK_URL');
+  var key = props.getProperty('DRAW_CLOCK_KEY');
+  if (!url || !key) return;
+  var startedAt = Number(draw.startedAt);
+  var left = Number(draw.leftMs);
+  var status = op === 'reset' ? 'idle' : startedAt > 0 ? 'running' : 'paused';
+  var arg = {
+    runId: 'bsp-' + draw.id, label: String(draw.name), status: status,
+    startedAt: startedAt, endsAt: startedAt + left, remainingMs: left, takeOver: op === 'start' && status === 'running'
+  };
+  try {
+    var res = UrlFetchApp.fetch(url, {
+      method: 'post', contentType: 'text/plain', muteHttpExceptions: true,
+      payload: JSON.stringify({ cmd: 'sync', key: key, arg: arg })
+    });
+    var out = JSON.parse(res.getContentText());
+    if (!out.ok) console.warn('Draw clock refused the sync: ' + out.error);
+  } catch (err) {
+    console.warn('Draw clock sync failed: ' + err);
+  }
 }
 
 // An end is {team: 0|1, pts: 1-8} or, for a blank end, {team: null, pts: 0}.
@@ -740,9 +788,11 @@ function resetResults(body) {
   var id = String(body.id);
   var draws = readTab('Draws').filter(function (draw) { return String(draw.bonspielId) === id || String(draw.teamsFrom) === id; });
   draws.forEach(function (draw) {
+    var used = Number(draw.startedAt) > 0 || Number(draw.leftMs) !== Number(draw.minutes) * 60000;
     draw.startedAt = 0;
     draw.leftMs = Number(draw.minutes) * 60000;
     writeRow('Draws', draw._row, draw);
+    if (used) syncDrawClock(draw, 'reset'); // Takes the draw off the rink clock if it's still showing there.
   });
   gamesOf(draws).forEach(function (game) {
     game.ends = '[]';
