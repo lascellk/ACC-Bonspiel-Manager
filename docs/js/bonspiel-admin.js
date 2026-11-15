@@ -109,6 +109,9 @@ function renderDetails() {
     ${number('pointsPerEnd', 'Points for each end won', s.pointsPerEnd, 0, 10, 'pools fixed', 'trackEnds')}
     ${checkbox('scorePoints', 'Add points for total score', s.scorePoints, 'pools fixed')}
     ${number('maxEndPoints', 'Most points an end (0 for no limit)', s.maxEndPoints, 0, 8, 'pools fixed', 'scorePoints')}
+    <fieldset class="choices grow" data-for="pools fixed"><legend>Standings show</legend>
+      ${['pools', 'overall'].map((value) => `<label><input type="radio" name="standingsView" value="${value}" ${s.standingsView === value ? 'checked' : ''}> ${value === 'pools' ? 'A table for each pool' : 'All teams in one table'}</label>`).join('')}
+    </fieldset>
     ${gameTypeFields(s.ends, s.minutes)}
     <div class="grow button-row">
       <button type="submit" class="primary">Save details</button>
@@ -129,12 +132,13 @@ function showFormatFields() {
 
 function saveDetails(form) {
   const values = Object.fromEntries(new FormData(form));
-  const { name, startDate, format, trackEnds, scorePoints, gameType, ...numbers } = values;
+  const { name, startDate, format, trackEnds, scorePoints, gameType, standingsView, ...numbers } = values;
   const settings = {
     ...DEFAULT_SETTINGS,
     ...Object.fromEntries(Object.entries(numbers).map(([key, value]) => [key, Number(value)])),
     trackEnds: Boolean(trackEnds),
     scorePoints: Boolean(scorePoints),
+    standingsView: standingsView || 'pools',
   };
   const id = data?.bonspiel.id || '';
   run(async () => {

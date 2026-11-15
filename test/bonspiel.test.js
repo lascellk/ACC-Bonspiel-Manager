@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   assignDraws, assignPools, buildGames, doubleKnockout, drawTimes, fixedGames, linkedGames, nextRound, pairRound, playoffGames, playoffSeeds,
-  roundRobin, scheduleProblems, singleKnockout, sourceLabel, standings, swapGames, SHEETS,
+  poolStandings, roundRobin, scheduleProblems, singleKnockout, sourceLabel, standings, swapGames, SHEETS,
 } from '../docs/js/bonspiel.js';
 
 const SIZES = [4, 7, 8, 12, 15, 16];
@@ -322,4 +322,19 @@ test('the public page opens the bonspiel that is on', async () => {
   // Undated bonspiels only when nothing has a date.
   assert.equal(currentBonspiel([{ id: 'x', startDate: '' }, turkey], null, '2027-06-01'), turkey);
   assert.equal(currentBonspiel([{ id: 'x', startDate: '' }], null, '2027-06-01').id, 'x');
+});
+
+test('pool tables count crossover games, and the overall view puts every team in one table', () => {
+  const teams = makeTeams(4).map((team, i) => ({ ...team, pool: i < 2 ? 'A' : 'B' }));
+  const games = [played('t1', 't2', 5, 1), played('t3', 't4', 4, 2), played('t1', 't3', 2, 6), played('t2', 't4', 3, 3)];
+  const pools = poolStandings(teams, games, settings);
+  assert.deepEqual(pools.map((group) => group.pool), ['A', 'B']);
+  const a = rowsById(pools[0].rows);
+  assert.deepEqual([a.t1.played, a.t1.won, a.t1.lost, a.t2.tied], [2, 1, 1, 1]);
+  assert.equal(pools[1].rows[0].team.id, 't3');
+  const overall = poolStandings(teams, games, { ...settings, standingsView: 'overall' });
+  assert.equal(overall.length, 1);
+  assert.equal(overall[0].pool, '');
+  assert.deepEqual(overall[0].rows.map((row) => row.team.id), ['t3', 't1', 't4', 't2']);
+  assert.deepEqual(overall[0].rows.map((row) => row.points), [4, 2, 1, 1]);
 });

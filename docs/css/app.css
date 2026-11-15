@@ -491,7 +491,7 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 .spin-result { min-height: 8vh; font-size: 2.8vh; font-weight: 700; text-align: center; overflow-wrap: anywhere; }
 
 /* Game type radio buttons (bonspiel details and the draw editor) */
-.game-type { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; min-width: 0; }
-.game-type legend { padding: 0; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
-.game-type label { display: flex; align-items: center; gap: 6px; min-height: 36px; font-size: 15px; color: var(--ink); }
+.game-type, .choices { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; min-width: 0; }
+.game-type legend, .choices legend { padding: 0; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+.game-type label, .choices label { display: flex; align-items: center; gap: 6px; min-height: 36px; font-size: 15px; color: var(--ink); }
 .game-type small { color: var(--muted); }

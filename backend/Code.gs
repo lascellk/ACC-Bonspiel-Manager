@@ -667,7 +667,8 @@ function cleanSettings(settings) {
     scorePoints: s.scorePoints === true,
     maxEndPoints: wholeNumber(s.maxEndPoints, 0, 0, 8),
     ends: wholeNumber(s.ends, 8, 1, 12),
-    minutes: wholeNumber(s.minutes, 95, 1, 600)
+    minutes: wholeNumber(s.minutes, 95, 1, 600),
+    standingsView: s.standingsView === 'overall' ? 'overall' : 'pools'
   };
 }
 

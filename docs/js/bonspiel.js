@@ -11,7 +11,7 @@ export const FORMATS = {
 };
 export const DEFAULT_SETTINGS = {
   gamesPerTeam: 3, poolCount: 2, playoffSize: 4, pointsWin: 2, pointsTie: 1, pointsLoss: 0, ends: 8, minutes: 95,
-  trackEnds: false, pointsPerEnd: 1, scorePoints: false, maxEndPoints: 0,
+  trackEnds: false, pointsPerEnd: 1, scorePoints: false, maxEndPoints: 0, standingsView: 'pools',
 };
 
 const POOL_NAMES = ['A', 'B', 'C', 'D'];
@@ -320,15 +320,19 @@ export const STANDING_FIELDS = ['played', 'won', 'tied', 'lost', 'endsWon', 'sco
 
 // Rank by points, then head-to-head among the tied teams, then points-for difference. Head-to-head
 // counts only win, tie and loss points. Draw-shot results aren't recorded, so a tie that remains is
-// flagged for the organiser with tied: true.
-export function standings(teams, games, settings) {
+// flagged for the organiser with tied: true. opponents are the teams whose games against these teams count
+// too, so a pool's table includes its teams' crossover games against other pools.
+export function standings(teams, games, settings, opponents = teams) {
   const rows = teams.map((team) => ({ team, played: 0, won: 0, tied: 0, lost: 0, points: 0, pf: 0, pa: 0, endsWon: 0, scored: 0, unresolved: false }));
   const row = new Map(rows.map((item) => [item.team.id, item]));
-  const counted = games.filter((game) => game.final && game.phase === 'pool' && row.has(game.team1Id) && row.has(game.team2Id));
+  const known = new Set([...teams, ...opponents].map((team) => team.id));
+  const counted = games.filter((game) => game.final && game.phase === 'pool' && known.has(game.team1Id) && known.has(game.team2Id)
+    && (row.has(game.team1Id) || row.has(game.team2Id)));
   counted.forEach((game) => {
     const [one, two] = totals(game);
     [[game.team1Id, one, two, 0], [game.team2Id, two, one, 1]].forEach(([id, mine, theirs, side]) => {
       const item = row.get(id);
+      if (!item) return;
       const ends = endsWon(game, side);
       const scored = cappedScore(game, side, settings.maxEndPoints);
       item.played += 1;
@@ -373,10 +377,14 @@ export function standings(teams, games, settings) {
   return ranked.map((item, i) => ({ ...item, rank: i + 1 }));
 }
 
+// One table per pool, or one table of all teams when the organiser chose standingsView 'overall'
+// (pools used only to split the draws). Playoff seeds and the standings editor follow the same choice.
 export function poolStandings(teams, games, settings) {
   const pools = poolNames(teams);
-  if (pools.length < 2) return [{ pool: pools[0] || '', rows: standings(teams, games, settings) }];
-  return pools.map((pool) => ({ pool, rows: standings(teams.filter((team) => team.pool === pool), games, settings) }));
+  if (pools.length < 2 || settings.standingsView === 'overall') {
+    return [{ pool: pools.length === 1 && settings.standingsView !== 'overall' ? pools[0] : '', rows: standings(teams, games, settings) }];
+  }
+  return pools.map((pool) => ({ pool, rows: standings(teams.filter((team) => team.pool === pool), games, settings, teams) }));
 }
 
 // Pool winners first, then runners-up and so on, each place in order of points and difference.

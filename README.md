@@ -39,6 +39,7 @@ Rules to know:
 - **Track ends won** adds an EW column and points for each end a team scores in, which can be 0 to track them without points. A blank end counts for nobody.
 - **Add points for total score** gives a team 1 point for each point it scores. Set a limit to count only that many from any one end, so with a limit of 3, an end of 5 earns 3. The limit doesn't change the game's score or the difference.
 - Changing these options updates the standings straight away, including for games already played.
+- **Standings show** on the Details step chooses a table for each pool, or all teams in one table (for pools that only split the draws, such as early and late). Playoff seeds and the standings editor follow the same choice. A pool table counts its teams' games against other pools too.
 - Teams rank on points, then head-to-head wins, ties and losses, then point difference. Draw-shot results aren't recorded, so a tie that remains is marked for you to settle in the playoff seeds.
 - A playoff or knockout game can't finish tied. Finishing one puts the winner and loser into their next games.
 - To change the score of a finished playoff or knockout game, reopen it first. Reopening clears the next games, and is refused if one of them has started.
