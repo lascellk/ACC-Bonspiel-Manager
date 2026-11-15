@@ -132,6 +132,20 @@ function showFormatFields() {
   });
 }
 
+// Standings show takes effect straight away, without Save details. Only this setting is saved, from the stored
+// bonspiel, so other unsaved changes on the form are left as they are.
+async function saveStandingsView(view) {
+  if (!data?.bonspiel.id) return; // A new bonspiel saves it with Save details.
+  const { id, name, startDate, format, settings } = data.bonspiel;
+  try {
+    await post('saveBonspiel', { bonspiel: { id, name, startDate, format, settings: { ...settings, standingsView: view } } });
+    data.bonspiel.settings = { ...settings, standingsView: view };
+    toast(view === 'overall' ? 'Standings show all teams in one table' : 'Standings show a table for each pool');
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
 function saveDetails(form) {
   const values = Object.fromEntries(new FormData(form));
   const { name, startDate, format, trackEnds, scorePoints, gameType, standingsView, ...numbers } = values;
@@ -390,6 +404,7 @@ $('#steps').addEventListener('click', (event) => {
 $('#content').addEventListener('change', (event) => {
   if (['format', 'trackEnds', 'scorePoints'].includes(event.target.name)) showFormatFields();
   if (event.target.name === 'gameType') applyGameType(event.target.form);
+  if (event.target.name === 'standingsView') saveStandingsView(event.target.value);
   if (event.target.dataset.time !== undefined) preview[Number(event.target.dataset.time)].startsAt = event.target.value;
 });
 
