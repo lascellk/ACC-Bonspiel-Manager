@@ -5,7 +5,7 @@ import {
   playoffSeeds, poolStandings, scheduleProblems, SHEETS, sourceLabel, STANDING_FIELDS, standingGames, standings, swapGames,
 } from './bonspiel.js';
 import { bracketHtml, linkedSchedule, scheduleHtml, standingsHtml } from './bonspiel-view.js';
-import { esc, loadLogos, logoHtml, logoOptions, notConfiguredNotice, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
+import { applyGameType, esc, gameTypeFields, loadLogos, logoHtml, logoOptions, notConfiguredNotice, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
 const STEPS = ['Details', 'Teams', 'Schedule', 'Run'];
@@ -109,8 +109,7 @@ function renderDetails() {
     ${number('pointsPerEnd', 'Points for each end won', s.pointsPerEnd, 0, 10, 'pools fixed', 'trackEnds')}
     ${checkbox('scorePoints', 'Add points for total score', s.scorePoints, 'pools fixed')}
     ${number('maxEndPoints', 'Most points an end (0 for no limit)', s.maxEndPoints, 0, 8, 'pools fixed', 'scorePoints')}
-    ${number('ends', 'Ends', s.ends, 1, 12)}
-    ${number('minutes', 'Timer (minutes)', s.minutes, 1, 600)}
+    ${gameTypeFields(s.ends, s.minutes)}
     <div class="grow button-row">
       <button type="submit" class="primary">Save details</button>
       ${item.id ? '<button type="button" class="danger" data-action="delete-bonspiel">Delete bonspiel</button>' : ''}
@@ -130,7 +129,7 @@ function showFormatFields() {
 
 function saveDetails(form) {
   const values = Object.fromEntries(new FormData(form));
-  const { name, startDate, format, trackEnds, scorePoints, ...numbers } = values;
+  const { name, startDate, format, trackEnds, scorePoints, gameType, ...numbers } = values;
   const settings = {
     ...DEFAULT_SETTINGS,
     ...Object.fromEntries(Object.entries(numbers).map(([key, value]) => [key, Number(value)])),
@@ -384,6 +383,7 @@ $('#steps').addEventListener('click', (event) => {
 
 $('#content').addEventListener('change', (event) => {
   if (['format', 'trackEnds', 'scorePoints'].includes(event.target.name)) showFormatFields();
+  if (event.target.name === 'gameType') applyGameType(event.target.form);
   if (event.target.dataset.time !== undefined) preview[Number(event.target.dataset.time)].startsAt = event.target.value;
 });
 

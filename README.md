@@ -28,7 +28,7 @@ If a tied game needs an extra end, keep scoring: the line score grows by itself.
 
 The four steps on `bonspiel.html`:
 
-1. **Details:** name, date, format and settings. The formats are pools then playoffs, fixed games ranked on points, and single or double knockout.
+1. **Details:** name, date, format and settings, including the game type. The game types match the rink Draw Clock: **8-End Draw** (95 min), **6-End Draw** (65 min), **Mixed Doubles** (8 ends, 90 min), or **Custom** for any ends and minutes. The draw editor on `admin.html` has the same choice. The formats are pools then playoffs, fixed games ranked on points, and single or double knockout.
 2. **Teams:** add up to 16 teams with their rosters, seeds and logos. **Assign pools** deals the seeded teams out evenly, and you can change any pool by hand.
 3. **Schedule:** enter the first draw time, then generate. The preview isn't saved until you say so. Tap two games to swap them, and the page says if a swap puts a team on two sheets or a game ahead of a result it needs.
 4. **Run:** press **Make live** for the current draw and score it as usual. **Take off live** clears the scoring page and TV without losing any scores or the timer. In a fixed-games event, press **Fill round** after each round. When the pools end, check the seeds and press **Fill the playoff games**.

@@ -2,7 +2,7 @@
 import { configured, get, post, serverNow, watch } from './api.js';
 import { setupCast } from './cast.js';
 import { spinResult, wheelSeconds } from './core.js';
-import { esc, loadLogos, logoOptions, notConfiguredNotice, paintClock, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
+import { applyGameType, esc, gameTypeFields, loadLogos, logoOptions, notConfiguredNotice, paintClock, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
 const LOGO_SIZE = 160;
@@ -112,8 +112,7 @@ function openEditor(draw) {
       <label class="grow">Draw name <input name="name" value="${esc(draw.name)}" maxlength="60" required></label>
       <label>Date <input type="date" name="date" value="${esc(draw.date)}"></label>
       <label>Start time <input type="time" name="startTime" value="${esc(draw.startsAt.slice(11))}"></label>
-      <label>Ends <input type="number" name="ends" min="1" max="12" value="${draw.ends}" required></label>
-      <label>Timer (minutes) <input type="number" name="minutes" min="1" max="600" value="${draw.minutes}" required></label>
+      ${gameTypeFields(draw.ends, draw.minutes)}
       <label class="check"><input type="checkbox" name="showTimer" ${draw.showTimer ? 'checked' : ''}> Show timer</label>
       ${teamSourceField(draw)}
     </div>
@@ -308,6 +307,7 @@ $('#spin-dialog').addEventListener('cancel', (event) => {
 });
 
 $('#draw-dialog').addEventListener('change', (event) => {
+  if (event.target.name === 'gameType') applyGameType(event.target.form);
   if (event.target.name === 'teamSource') chooseTeamSource(event.target.value).catch((error) => toast(error.message));
 });
 

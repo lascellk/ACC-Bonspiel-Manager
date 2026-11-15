@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { currentHammer, endColumns, formatClock, hammerAt, stoneOf, timeLeft, timerPhase, totals } from '../docs/js/core.js';
+import { currentHammer, endColumns, formatClock, gameTypeOf, hammerAt, stoneOf, timeLeft, timerPhase, totals } from '../docs/js/core.js';
 
 const game = (ends, hammer = 0, extra = {}) => ({ hammer, ends, stone: 'red', final: false, ...extra });
 const score = (team, pts) => ({ team, pts });
@@ -50,4 +50,12 @@ test('clock shows minutes past the hour and never goes negative', () => {
   assert.equal(formatClock(95 * 60000), '95:00');
   assert.equal(formatClock(59001), '1:00');
   assert.equal(formatClock(-5), '0:00');
+});
+
+test('game type matches the Draw Clock presets, anything else is custom', () => {
+  assert.equal(gameTypeOf(8, 95), 'ends8');
+  assert.equal(gameTypeOf('6', '65'), 'ends6');
+  assert.equal(gameTypeOf(8, 90), 'md');
+  assert.equal(gameTypeOf(8, 100), 'custom');
+  assert.equal(gameTypeOf(6, 95), 'custom');
 });

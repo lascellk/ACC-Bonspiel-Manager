@@ -1,5 +1,5 @@
 // HTML pieces shared by the score entry, admin and TV pages.
-import { currentHammer, endColumns, formatClock, stoneOf, teamLogo, teamName, timeLeft, timerPhase, totals, WARNING_MS } from './core.js';
+import { currentHammer, endColumns, formatClock, GAME_TYPES, gameTypeOf, stoneOf, teamLogo, teamName, timeLeft, timerPhase, totals, WARNING_MS } from './core.js';
 import { get, getPin, post, setPin } from './api.js';
 
 export const esc = (text) => String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -9,6 +9,30 @@ export const HAMMER_ICON = `<svg class="hammer" viewBox="0 0 24 24" role="img" a
 export const stoneIcon = (colour) => `<span class="stone stone-${colour}" title="${colour} stones"></span>`;
 
 export const STOP_LIVE_WARNING = 'Take this draw off live? The scoring page and TV will show no draw until one is made live again.';
+
+// Game type radio buttons, with Ends and Timer boxes that show only for Custom. Inputs keep the names ends and minutes.
+export function gameTypeFields(ends, minutes) {
+  const chosen = gameTypeOf(ends, minutes);
+  const radio = (id, text) => `<label><input type="radio" name="gameType" value="${id}" ${id === chosen ? 'checked' : ''}> ${text}</label>`;
+  const custom = chosen === 'custom' ? '' : 'hidden';
+  return `<fieldset class="game-type grow"><legend>Game type</legend>
+    ${GAME_TYPES.map((type) => radio(type.id, `${type.label} <small>(${type.minutes} min)</small>`)).join('')}
+    ${radio('custom', 'Custom')}
+  </fieldset>
+  <label data-custom ${custom}>Ends <input type="number" name="ends" min="1" max="12" value="${ends}" required></label>
+  <label data-custom ${custom}>Timer (minutes) <input type="number" name="minutes" min="1" max="600" value="${minutes}" required></label>`;
+}
+
+// Call when a gameType radio changes: a preset fills in its ends and minutes, Custom shows the boxes.
+export function applyGameType(form) {
+  const type = GAME_TYPES.find((item) => item.id === form.elements.gameType.value);
+  if (type) {
+    form.elements.ends.value = type.ends;
+    form.elements.minutes.value = type.minutes;
+  }
+  form.querySelectorAll('[data-custom]').forEach((label) => { label.hidden = Boolean(type); });
+  if (!type) form.elements.minutes.focus();
+}
 
 let logos = {};
 export async function loadLogos() {

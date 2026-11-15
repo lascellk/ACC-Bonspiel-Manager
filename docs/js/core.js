@@ -1,6 +1,16 @@
 // Curling rules and timer maths, shared by every page. No DOM here.
 
 export const MAX_POINTS = 8;
+// The same game types as the rink Draw Clock (PRESETS in its Code.gs). Anything else is Custom.
+export const GAME_TYPES = [
+  { id: 'ends8', label: '8-End Draw', ends: 8, minutes: 95 },
+  { id: 'ends6', label: '6-End Draw', ends: 6, minutes: 65 },
+  { id: 'md', label: 'Mixed Doubles', ends: 8, minutes: 90 },
+];
+export function gameTypeOf(ends, minutes) {
+  const type = GAME_TYPES.find((item) => item.ends === Number(ends) && item.minutes === Number(minutes));
+  return type ? type.id : 'custom';
+}
 export const WARNING_MS = 15 * 60000; // timer turns yellow, silently, like the rink TV
 
 export const otherTeam = (team) => (team === 0 ? 1 : 0);
