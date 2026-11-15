@@ -72,7 +72,7 @@ The club's separate ACC Draw Clock (the big countdown on the rink TV) follows bo
 - **Start draw** on a bonspiel draw, or on a hand-made draw linked to a bonspiel, puts that draw on the rink clock under its name. A practice draw that isn't linked leaves the rink clock alone.
 - Pause, **Start draw** again, adjusting the timer and resetting it all change the rink clock to match, as long as it still shows that draw. If a member starts a league draw on the Draw Clock in the meantime, it is left alone until the next **Start draw** here.
 - **Reset all results** takes the bonspiel's draws off the rink clock.
-- The rink TV keeps its own warning (yellow at 15 minutes, silent) and plays its start and time-up sounds.
+- The scoreboard timer and the rink TV both turn yellow at 15 minutes, with no sound. Only the rink TV plays start and time-up sounds.
 - If the Draw Clock can't be reached, the scoreboard timer works as usual. The failure shows under **Executions** in the Apps Script project.
 - On league nights the Draw Clock works on its own, as before.
 

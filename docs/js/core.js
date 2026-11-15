@@ -1,7 +1,7 @@
 // Curling rules and timer maths, shared by every page. No DOM here.
 
 export const MAX_POINTS = 8;
-export const WARNING_MS = 10 * 60000;
+export const WARNING_MS = 15 * 60000; // timer turns yellow, silently, like the rink TV
 
 export const otherTeam = (team) => (team === 0 ? 1 : 0);
 
