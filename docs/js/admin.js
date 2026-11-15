@@ -2,6 +2,7 @@
 import { configured, get, post, serverNow, watch } from './api.js';
 import { setupCast } from './cast.js';
 import { spinResult, wheelSeconds } from './core.js';
+import { DEFAULT_SETTINGS } from './bonspiel.js';
 import { applyGameType, esc, gameTypeFields, loadLogos, logoOptions, notConfiguredNotice, paintClock, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -15,7 +16,7 @@ let live = null;
 let editing = null;
 let bonspiels = [];
 let sourceTeams = []; // Teams of the bonspiel chosen in the draw editor.
-let tvBonspiel = ''; // The bonspiel on the TV, or '' for the scoreboard.
+let tvBonspiel = ''; // The bonspiel on the TV, 'draw:<id>' for an ad-hoc draw's results, or '' for the scoreboard.
 let spinning = false; // True until the TV has had time to finish the wheels.
 
 const blankGame = (sheet) => ({ sheet, team1: '', team2: '', logo1: '', logo2: '', stone: '', hammer: null });
@@ -33,14 +34,23 @@ async function refresh() {
   renderTvView();
 }
 
+const adHoc = (draw) => !draw.bonspielId && !draw.teamsFrom;
+
 function renderTvView() {
+  const results = tvBonspiel.startsWith('draw:');
   const choice = $('#tv-view [value=bonspiel]');
   const select = $('#tv-bonspiel');
   $('#tv-view [value=scoreboard]').checked = !tvBonspiel;
-  choice.checked = Boolean(tvBonspiel);
+  choice.checked = Boolean(tvBonspiel) && !results;
   choice.disabled = !bonspiels.length;
   select.innerHTML = bonspiels.map((item) => `<option value="${esc(item.id)}" ${item.id === tvBonspiel ? 'selected' : ''}>${esc(item.name)}</option>`).join('');
-  select.hidden = !tvBonspiel;
+  select.hidden = !choice.checked;
+  const drawChoice = $('#tv-view [value=results]');
+  drawChoice.checked = results;
+  drawChoice.disabled = !draws.some(adHoc);
+  $('#tv-draw').innerHTML = draws.filter(adHoc).map((draw) =>
+    `<option value="${esc(draw.id)}" ${`draw:${draw.id}` === tvBonspiel ? 'selected' : ''}>${esc(draw.name)}</option>`).join('');
+  $('#tv-draw').hidden = !results;
 }
 
 function matchup(game) {
@@ -60,6 +70,7 @@ function renderDraws() {
     <footer>
       <button type="button" data-edit="${draw.id}">Edit</button>
       ${draw.id === liveId ? '<button type="button" data-stop-live="true">Take off live</button>' : `<button type="button" class="primary" data-live="${draw.id}">Make live</button>`}
+      ${adHoc(draw) ? `<a class="top-link dark" href="event.html?draw=${esc(draw.id)}" target="_blank" rel="noopener">Results</a>` : ''}
       ${draw.bonspielId ? '' : `<button type="button" class="danger" data-delete="${draw.id}">Delete</button>`}
     </footer>
   </article>`).join('') : '<p class="empty">No draws yet. Create the first one.</p>';
@@ -89,6 +100,28 @@ function gameFields(game) {
   </fieldset>`;
 }
 
+// Points for an ad-hoc draw's results table. Hidden while Teams from names a bonspiel, whose settings apply.
+function scoringFields(draw) {
+  if (draw.bonspielId) return '';
+  const s = { ...DEFAULT_SETTINGS, ...(draw.scoring || {}) };
+  const num = (name, label, max) => `<label>${label} <input type="number" name="${name}" min="0" max="${max}" value="${s[name]}" required></label>`;
+  const box = (name, label) => `<label class="check"><input type="checkbox" name="${name}" ${s[name] ? 'checked' : ''}> ${label}</label>`;
+  return `<fieldset id="draw-scoring" class="draw-scoring grow" ${draw.teamsFrom ? 'hidden' : ''}>
+    <legend>Points for the results table</legend>
+    <div class="draw-fields">
+      ${num('pointsWin', 'Win', 10)}${num('pointsTie', 'Tie', 10)}${num('pointsLoss', 'Loss', 10)}
+      ${box('trackEnds', 'Track ends won')}${num('pointsPerEnd', 'Points for each end won', 10)}
+      ${box('scorePoints', 'Add points for total score')}${num('maxEndPoints', 'Most points an end (0 for no limit)', 8)}
+    </div>
+  </fieldset>`;
+}
+
+function readScoring(data) {
+  if (!data.has('pointsWin')) return undefined;
+  return Object.fromEntries(['pointsWin', 'pointsTie', 'pointsLoss', 'trackEnds', 'pointsPerEnd', 'scorePoints', 'maxEndPoints']
+    .map((field) => [field, ['trackEnds', 'scorePoints'].includes(field) ? data.has(field) : Number(data.get(field))]));
+}
+
 function teamSourceField(draw) {
   if (draw.bonspielId || !bonspiels.length) return '';
   return `<label class="grow">Teams from <select name="teamSource">
@@ -115,6 +148,7 @@ function openEditor(draw) {
       ${gameTypeFields(draw.ends, draw.minutes)}
       <label class="check"><input type="checkbox" name="showTimer" ${draw.showTimer ? 'checked' : ''}> Show timer</label>
       ${teamSourceField(draw)}
+      ${scoringFields(draw)}
     </div>
     <datalist id="team-names"></datalist>
     ${draw.games.map(gameFields).join('')}
@@ -141,6 +175,7 @@ function readEditor(form) {
     ends: Number(data.get('ends')),
     minutes: Number(data.get('minutes')),
     showTimer: data.has('showTimer'),
+    scoring: readScoring(data),
     games: [1, 2, 3, 4].map((sheet) => ({
       sheet,
       team1: data.get(`team1-${sheet}`),
@@ -275,11 +310,13 @@ function renderLive() {
 $('#new-draw').addEventListener('click', () => openEditor(blankDraw()));
 
 $('#tv-view').addEventListener('change', () => {
+  const drawId = $('#tv-view [value=results]').checked ? $('#tv-draw').value : '';
   const bonspielId = $('#tv-view [value=bonspiel]').checked ? $('#tv-bonspiel').value : '';
+  const drawName = draws.find((draw) => draw.id === drawId)?.name;
   run(async () => {
-    await post('setTvView', { bonspielId });
-    tvBonspiel = bonspielId;
-  }, bonspielId ? `TV shows ${bonspielName(bonspielId)}` : 'TV shows the scoreboard');
+    await post('setTvView', drawId ? { drawId } : { bonspielId });
+    tvBonspiel = drawId ? `draw:${drawId}` : bonspielId;
+  }, drawId ? `TV shows the results of ${drawName}` : bonspielId ? `TV shows ${bonspielName(bonspielId)}` : 'TV shows the scoreboard');
 });
 
 $('#draw-list').addEventListener('click', (event) => {
@@ -308,6 +345,7 @@ $('#spin-dialog').addEventListener('cancel', (event) => {
 
 $('#draw-dialog').addEventListener('change', (event) => {
   if (event.target.name === 'gameType') applyGameType(event.target.form);
+  if (event.target.name === 'teamSource' && $('#draw-scoring')) $('#draw-scoring').hidden = Boolean(event.target.value);
   if (event.target.name === 'teamSource') chooseTeamSource(event.target.value).catch((error) => toast(error.message));
 });
 

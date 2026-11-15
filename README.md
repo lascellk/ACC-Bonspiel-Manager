@@ -61,6 +61,13 @@ Rules to know:
 - The public Schedule tab shows the bonspiel's saved schedule if it has one. If not, it shows the hand-made draws linked to that bonspiel, in order of date and **Start time**.
 - On `admin.html`, a bonspiel draw can have its stones, hammer and timer changed, but not its teams, and it can't be deleted there.
 
+## Ad-hoc draws and their results
+
+A hand-made draw with **Teams from** set to **No bonspiel** is an ad-hoc draw. Its editor has **Points for the results table**: points for a win, tie and loss, ends won and total score, the same choices as a bonspiel. A draw linked to a bonspiel scores by the bonspiel's settings instead, so the box is hidden.
+
+- **Results** on the draw's card opens its results page (`event.html?draw=<id>`): a table of its teams ranked by those points, and a Scores tab. Only finished games count, so press **Finish draw** on the scoring page when the draw ends.
+- **TV shows → Draw results** puts that page on the lounge TV, switching between the two tabs.
+
 ## Random hammer and colour
 
 **Random hammer / colour** in the draw editor saves the draw and puts four wheels on the TV, whatever it was showing and whichever draw is live. Tick **Hammer**, **Colour** or both, then press **Spin**.

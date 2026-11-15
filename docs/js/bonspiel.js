@@ -458,6 +458,18 @@ export function linkedGames(linkedDraws, teams) {
 
 export const standingGames = ({ draws, linkedDraws = [], teams }) => [...flatGames(draws), ...linkedGames(linkedDraws, teams)];
 
+// An ad-hoc draw (no bonspiel) as a one-table event, so the standings code ranks its finished games with the
+// draw's own points. Teams are the names on its sheets, matched ignoring capitals.
+export function drawResults(draw) {
+  const key = (name) => String(name || '').trim().toLowerCase();
+  const teams = new Map();
+  draw.games.forEach((game) => [[game.team1, game.logo1], [game.team2, game.logo2]].forEach(([name, logo]) => {
+    if (key(name) && !teams.has(key(name))) teams.set(key(name), { id: `t:${key(name)}`, name: String(name).trim(), logo: logo || '', pool: '' });
+  }));
+  const settings = { ...DEFAULT_SETTINGS, ...(draw.scoring || {}), standingsView: 'overall' };
+  return { bonspiel: { id: '', name: draw.name, format: 'fixed', settings }, teams: [...teams.values()], draws: [], linkedDraws: [draw] };
+}
+
 // ----- Which bonspiel is on
 
 // A bonspiel counts as still on for this many days after its start date, for a weekend event.

@@ -4,7 +4,7 @@
 // PINs live in Script Properties: ADMIN_PIN (draw setup) and SCORE_PIN (score entry).
 
 var TABS = {
-  Draws: ['id', 'name', 'date', 'ends', 'minutes', 'startedAt', 'leftMs', 'showTimer', 'bonspielId', 'startsAt', 'teamsFrom'],
+  Draws: ['id', 'name', 'date', 'ends', 'minutes', 'startedAt', 'leftMs', 'showTimer', 'bonspielId', 'startsAt', 'teamsFrom', 'scoring'],
   Games: ['drawId', 'sheet', 'team1', 'logo1', 'team2', 'logo2', 'stone1', 'hammer', 'ends', 'final',
     'gameId', 'team1Id', 'team2Id', 'phase', 'bracket', 'source1', 'source2'],
   Logos: ['id', 'name', 'data'],
@@ -192,6 +192,7 @@ function toDraw(row, games) {
     minutes: Number(row.minutes), startedAt: Number(row.startedAt), leftMs: Number(row.leftMs),
     showTimer: String(row.showTimer) !== 'false', // Draws saved before this setting existed are blank.
     bonspielId: String(row.bonspielId), startsAt: String(row.startsAt), teamsFrom: String(row.teamsFrom),
+    scoring: row.scoring ? JSON.parse(row.scoring) : null, // An ad-hoc draw's points for its results table.
     games: games.filter(function (game) { return String(game.drawId) === String(row.id); })
       .map(toGame).sort(function (a, b) { return a.sheet - b.sheet; })
   };
@@ -264,6 +265,8 @@ function saveDraw(body) {
   // A scheduled draw already belongs to its bonspiel, so only a hand-made draw can be linked to one.
   item.teamsFrom = item.bonspielId ? '' : cleanText(draw.teamsFrom, 8);
   if (item.teamsFrom) findBonspiel(item.teamsFrom);
+  // A draw in a bonspiel scores by the bonspiel's settings; an ad-hoc draw has its own.
+  item.scoring = item.bonspielId || item.teamsFrom ? '' : JSON.stringify(cleanScoring(draw.scoring));
   if (row) writeRow('Draws', row._row, item); else appendRow('Draws', item);
   if (timerWasShown && !item.showTimer) syncDrawClock(item, 'reset'); // Hiding the timer takes it off the rink clock.
 
@@ -294,6 +297,7 @@ function deleteDraw(body) {
   deleteRows('Games', readTab('Games').filter(function (g) { return String(g.drawId) === String(body.id); }));
   deleteRows('Draws', readTab('Draws').filter(function (d) { return String(d.id) === String(body.id); }));
   if (liveId() === String(body.id)) PropertiesService.getScriptProperties().deleteProperty('LIVE_DRAW');
+  if (tvBonspiel() === 'draw:' + body.id) setTvView({});
 }
 
 function goLive(body) {
@@ -305,13 +309,18 @@ function stopLive() {
   PropertiesService.getScriptProperties().deleteProperty('LIVE_DRAW');
 }
 
-// The bonspiel whose public page is on the TV, or '' for the scoreboard.
+// What the TV shows over the scoreboard: a bonspiel id for its public page, 'draw:<id>' for an ad-hoc draw's
+// results, or '' for the scoreboard.
 function tvBonspiel() {
   return PropertiesService.getScriptProperties().getProperty('TV_BONSPIEL') || '';
 }
 
 function setTvView(body) {
   var props = PropertiesService.getScriptProperties();
+  if (body.drawId) {
+    props.setProperty('TV_BONSPIEL', 'draw:' + String(findDraw(body.drawId).id));
+    return;
+  }
   if (!body.bonspielId) {
     props.deleteProperty('TV_BONSPIEL');
     return;
@@ -696,6 +705,14 @@ function cleanSettings(settings) {
     minutes: wholeNumber(s.minutes, 95, 1, 600),
     standingsView: s.standingsView === 'overall' ? 'overall' : 'pools'
   };
+}
+
+var SCORING_FIELDS = ['pointsWin', 'pointsTie', 'pointsLoss', 'trackEnds', 'pointsPerEnd', 'scorePoints', 'maxEndPoints'];
+function cleanScoring(scoring) {
+  var s = cleanSettings(scoring);
+  var out = {};
+  SCORING_FIELDS.forEach(function (field) { out[field] = s[field]; });
+  return out;
 }
 
 function saveBonspiel(body) {

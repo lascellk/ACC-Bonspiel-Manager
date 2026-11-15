@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   assignDraws, assignPools, buildGames, doubleKnockout, drawTimes, fixedGames, linkedGames, nextRound, pairRound, playoffGames, playoffSeeds,
-  poolStandings, roundRobin, scheduleProblems, singleKnockout, sourceLabel, standings, swapGames, SHEETS,
+  drawResults, poolStandings, roundRobin, standingGames, scheduleProblems, singleKnockout, sourceLabel, standings, swapGames, SHEETS,
 } from '../docs/js/bonspiel.js';
 
 const SIZES = [4, 7, 8, 12, 15, 16];
@@ -337,4 +337,22 @@ test('pool tables count crossover games, and the overall view puts every team in
   assert.equal(overall[0].pool, '');
   assert.deepEqual(overall[0].rows.map((row) => row.team.id), ['t3', 't1', 't4', 't2']);
   assert.deepEqual(overall[0].rows.map((row) => row.points), [4, 2, 1, 1]);
+});
+
+test('an ad-hoc draw ranks its finished games with its own points', () => {
+  const end = (team, pts) => ({ team, pts });
+  const draw = {
+    id: 'd3', name: 'Draw 3', scoring: { pointsWin: 10, pointsTie: 5, pointsLoss: 0, trackEnds: true, pointsPerEnd: 2 },
+    games: [
+      { sheet: 1, team1: 'Reds', team2: 'Blues', logo1: '', logo2: '', ends: [end(0, 3), end(1, 1)], final: true },
+      { sheet: 2, team1: 'Greens', team2: 'Golds', logo1: '', logo2: '', ends: [end(0, 1), end(1, 1)], final: true },
+      { sheet: 3, team1: 'Pinks', team2: 'Greys', logo1: '', logo2: '', ends: [end(0, 4)], final: false },
+      { sheet: 4, team1: '', team2: '', logo1: '', logo2: '', ends: [], final: false },
+    ],
+  };
+  const data = drawResults(draw);
+  assert.equal(data.teams.length, 6);
+  const rows = poolStandings(data.teams, standingGames(data), data.bonspiel.settings)[0].rows;
+  assert.deepEqual(rows.slice(0, 4).map((row) => [row.team.name, row.points]), [['Reds', 12], ['Greens', 7], ['Golds', 7], ['Blues', 2]]);
+  assert.equal(rows.find((row) => row.team.name === 'Pinks').played, 0);
 });

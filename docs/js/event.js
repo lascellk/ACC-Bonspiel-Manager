@@ -1,7 +1,7 @@
 // Public event page: schedule, live and final scores, standings, brackets and teams. No PIN.
 // With ?tv=1 it fills a TV and moves through its tabs by itself.
 import { configured, get } from './api.js';
-import { currentBonspiel, FORMATS } from './bonspiel.js';
+import { currentBonspiel, drawResults, FORMATS } from './bonspiel.js';
 import { bracketHtml, linkedSchedule, scheduleHtml, standingsHtml, teamsHtml } from './bonspiel-view.js';
 import { esc, loadLogos, notConfiguredNotice, toast } from './view.js';
 
@@ -20,6 +20,7 @@ const usesBracket = () => data.draws.some((draw) => draw.games.some((game) => ga
 const usesStandings = () => ['pools', 'fixed'].includes(data.bonspiel.format);
 
 function tabs() {
+  if (data.adHoc) return ['Results', 'Scores'];
   return ['Schedule', ...(usesStandings() ? ['Standings'] : []), ...(usesBracket() ? ['Bracket'] : []), 'Teams'];
 }
 
@@ -29,6 +30,8 @@ function scheduleDraws() {
 }
 
 function body() {
+  if (tab === 'Results') return standingsHtml(data);
+  if (tab === 'Scores') return scheduleHtml(data.linkedDraws, liveId);
   if (tab === 'Standings') return standingsHtml(data);
   if (tab === 'Bracket') return bracketHtml(data.draws);
   if (tab === 'Teams') return teamsHtml(data.teams);
@@ -93,6 +96,32 @@ async function refresh(id) {
   }
 }
 
+// An ad-hoc draw's results (?draw=<id>): a table ranked by the draw's own points, and its scores.
+async function refreshDraw(id) {
+  if (document.visibilityState === 'hidden') return;
+  try {
+    const result = await get('draws');
+    $('#offline').hidden = true;
+    const found = result.draws.find((item) => item.id === id);
+    const next = JSON.stringify([found, result.liveId]);
+    if (next === shown) return;
+    shown = next;
+    if (!found) {
+      data = null;
+      $('#tabs').hidden = true;
+      $('#content').innerHTML = '<section class="panel"><p class="empty">This draw no longer exists.</p></section>';
+      return;
+    }
+    data = { ...drawResults(found), adHoc: true };
+    liveId = result.liveId;
+    $('#event-title').textContent = `${found.name} results`;
+    document.title = `${found.name} results`;
+    render();
+  } catch {
+    $('#offline').hidden = false;
+  }
+}
+
 $('#tabs').addEventListener('click', (event) => {
   if (!event.target.dataset.tab) return;
   tab = event.target.dataset.tab;
@@ -104,6 +133,14 @@ async function start() {
   await loadLogos().catch(() => {});
   const params = new URLSearchParams(location.search);
   const id = params.get('id');
+  const drawId = params.get('draw');
+  if (drawId) {
+    document.body.classList.toggle('event-tv', params.has('tv'));
+    await refreshDraw(drawId);
+    setInterval(() => refreshDraw(drawId), POLL_MS);
+    if (params.has('tv')) rotateTabs();
+    return;
+  }
   if (!id) {
     // The table sign links here with no id: open the bonspiel that's on. ?list=1 shows them all.
     const [{ bonspiels }, live] = await Promise.all([get('bonspiels'), get()]);

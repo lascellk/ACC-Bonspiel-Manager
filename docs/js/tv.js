@@ -19,7 +19,8 @@ function showEvent(id) {
   eventId = id;
   const frame = $('#tv-event');
   frame.hidden = !id;
-  frame.src = id ? `event.html?id=${encodeURIComponent(id)}&tv=1` : 'about:blank';
+  const page = id.startsWith('draw:') ? `draw=${encodeURIComponent(id.slice(5))}` : `id=${encodeURIComponent(id)}`;
+  frame.src = id ? `event.html?${page}&tv=1` : 'about:blank';
 }
 
 function sheetHtml(game, columns) {

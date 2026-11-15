@@ -155,3 +155,18 @@ test('finish draw finishes the games with ends, leaves unplayed sheets open and 
   assert.equal(draw.startedAt, 0);
   assert.equal(draw.leftMs, 95 * 60000);
 });
+
+test('an ad-hoc draw keeps its own points, a linked draw does not, and its results can go on the TV', () => {
+  const { api, id } = withDraw();
+  const scoring = { pointsWin: 10, pointsTie: 5, pointsLoss: 0, trackEnds: true, pointsPerEnd: 2, scorePoints: false, maxEndPoints: 0 };
+  admin(api, { action: 'saveDraw', draw: { id, name: 'Draw 1', minutes: 95, games, scoring } });
+  assert.deepEqual(api.get().draw.scoring, scoring);
+  admin(api, { action: 'setTvView', drawId: id });
+  assert.equal(api.get().tv, `draw:${id}`);
+  admin(api, { action: 'deleteDraw', id });
+  assert.equal(api.get().tv, '');
+  const bonspiel = admin(api, { action: 'saveBonspiel', bonspiel: { name: 'Fall', format: 'fixed', settings: {} } }).id;
+  const linked = admin(api, { action: 'saveDraw', draw: { name: 'Linked', teamsFrom: bonspiel, games, scoring } }).id;
+  admin(api, { action: 'goLive', id: linked });
+  assert.equal(api.get().draw.scoring, null);
+});
