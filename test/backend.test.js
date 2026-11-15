@@ -178,3 +178,18 @@ test('finish draw also finishes unplayed games when the scorer agrees', () => {
   assert.deepEqual(result.skipped, []);
   assert.deepEqual(api.get().draw.games.map((game) => game.final), [true, true, true, true]);
 });
+
+test('reset draw results clears the scores of an ad-hoc draw only', () => {
+  const { api, id } = withDraw();
+  scorer(api, { action: 'timer', id, op: 'start' });
+  scorer(api, { action: 'setEnd', drawId: id, sheet: 1, index: 0, end: { team: 0, pts: 2 } });
+  scorer(api, { action: 'finishDraw', id, unplayed: true });
+  assert.equal(scorer(api, { action: 'resetDrawResults', id }).ok, false);
+  admin(api, { action: 'resetDrawResults', id });
+  const { draw } = api.get();
+  assert.deepEqual(draw.games.map((game) => [game.ends.length, game.final]), [[0, false], [0, false], [0, false], [0, false]]);
+  assert.equal(draw.leftMs, 95 * 60000);
+  const bonspiel = admin(api, { action: 'saveBonspiel', bonspiel: { name: 'Fall', format: 'fixed', settings: {} } }).id;
+  const linked = admin(api, { action: 'saveDraw', draw: { name: 'Linked', teamsFrom: bonspiel, games } }).id;
+  assert.match(admin(api, { action: 'resetDrawResults', id: linked }).error, /bonspiel/);
+});

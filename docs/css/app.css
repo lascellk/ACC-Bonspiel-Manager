@@ -504,3 +504,6 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 /* Ad-hoc draw points, in the draw editor */
 .draw-scoring { border: 1px solid var(--line); border-radius: 8px; padding: 8px; min-width: 0; }
 .draw-scoring legend { padding: 0 4px; font-size: 13px; color: var(--muted); }
+
+/* A header link that is a button (Reset results on an ad-hoc draw's results page) */
+.top-button { border: 0; background: transparent; text-decoration: underline; cursor: pointer; }

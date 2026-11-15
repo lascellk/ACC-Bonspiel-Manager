@@ -47,6 +47,7 @@ var ACTIONS = {
   saveSeeding: { role: 'admin', fn: saveSeeding },
   saveStandings: { role: 'admin', fn: saveStandings },
   resetResults: { role: 'admin', fn: resetResults },
+  resetDrawResults: { role: 'admin', fn: resetDrawResults },
   saveSchedule: { role: 'admin', fn: saveSchedule },
   deleteSchedule: { role: 'admin', fn: deleteSchedule },
   seedPlayoffs: { role: 'admin', fn: seedPlayoffs },
@@ -852,6 +853,19 @@ function resetResults(body) {
   });
   row.status = drawsOf(id).length ? 'scheduled' : 'setup';
   writeRow('Bonspiels', row._row, row);
+}
+
+// Reset results on an ad-hoc draw's results page: clears every end and final, and resets the timer (which also
+// takes the draw off the rink clock). Teams, stones and hammer stay. A bonspiel's draws use Reset all results instead.
+function resetDrawResults(body) {
+  var draw = findDraw(body.id);
+  if (String(draw.bonspielId) || String(draw.teamsFrom)) throw new Error('This draw is in a bonspiel. Use Reset all results on the bonspiel page.');
+  readTab('Games').filter(function (game) { return String(game.drawId) === String(draw.id); }).forEach(function (game) {
+    game.ends = '[]';
+    game.final = false;
+    writeRow('Games', game._row, game);
+  });
+  timerAction({ id: draw.id, op: 'reset' });
 }
 
 // body.draws: [{name, startsAt, games: [{sheet, id, team1Id, team2Id, source1, source2, phase, bracket, hammer}]}]

@@ -67,6 +67,7 @@ A hand-made draw with **Teams from** set to **No bonspiel** is an ad-hoc draw. I
 
 - **Results** on the draw's card opens its results page (`event.html?draw=<id>`): a table of its teams ranked by those points, and a Scores tab. Only finished games count, so press **Finish draw** on the scoring page when the draw ends.
 - **TV shows → Draw results** puts that page on the lounge TV, switching between the two tabs.
+- **Reset results** in the results page's header clears every score and final in the draw and resets its timer. Teams, stones and hammer stay. It shows only on a device that has signed in to the scoring or admin page, never on the TV, and needs the admin PIN.
 
 ## Random hammer and colour
 

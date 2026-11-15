@@ -1,6 +1,6 @@
 // Public event page: schedule, live and final scores, standings, brackets and teams. No PIN.
 // With ?tv=1 it fills a TV and moves through its tabs by itself.
-import { configured, get } from './api.js';
+import { configured, get, getPin, post } from './api.js';
 import { currentBonspiel, drawResults, FORMATS } from './bonspiel.js';
 import { bracketHtml, linkedSchedule, scheduleHtml, standingsHtml, teamsHtml } from './bonspiel-view.js';
 import { esc, loadLogos, notConfiguredNotice, toast } from './view.js';
@@ -122,6 +122,21 @@ async function refreshDraw(id) {
   }
 }
 
+// Only on a device that has signed in to the scoring or admin pages, and never on the TV. The backend
+// still needs the admin PIN.
+$('#reset-results').addEventListener('click', async () => {
+  const id = new URLSearchParams(location.search).get('draw');
+  if (!confirm('Reset the results of this draw? Every score and final is cleared and the timer is reset. This can\'t be undone.')) return;
+  try {
+    await post('resetDrawResults', { id });
+    toast('Results reset');
+    shown = '';
+    await refreshDraw(id);
+  } catch (error) {
+    toast(error.message);
+  }
+});
+
 $('#tabs').addEventListener('click', (event) => {
   if (!event.target.dataset.tab) return;
   tab = event.target.dataset.tab;
@@ -136,6 +151,7 @@ async function start() {
   const drawId = params.get('draw');
   if (drawId) {
     document.body.classList.toggle('event-tv', params.has('tv'));
+    $('#reset-results').hidden = params.has('tv') || !getPin();
     await refreshDraw(drawId);
     setInterval(() => refreshDraw(drawId), POLL_MS);
     if (params.has('tv')) rotateTabs();
