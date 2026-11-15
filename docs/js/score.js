@@ -167,14 +167,20 @@ $('#end-dialog').addEventListener('close', () => {
 
 // Every game with an end scored becomes final, the timer goes back to full time, and the rink clock is cleared.
 async function finishDraw() {
-  if (!confirm('Finish the draw? Every game with ends scored becomes final, the timer is reset and the rink clock is cleared.')) return;
+  if (!confirm('Finish the draw? Every game becomes final, the timer is reset and the rink clock is cleared.')) return;
+  // A game with no ends counts as a 0-0 tie, so it is only finished if the scorer says so. Cancel leaves it open.
+  const unplayed = draw.games.filter((game) => hasTeams(game) && !game.final && !game.ends.length).map((game) => `Sheet ${game.sheet}`);
+  const list = unplayed.join(' and ').replace(/ and (?=.* and )/g, ', ');
+  const finishUnplayed = unplayed.length > 0 && confirm(unplayed.length === 1
+    ? `No ends have been scored on ${list}. Finish it anyway? It will count as a 0-0 tie. Cancel leaves it open.`
+    : `No ends have been scored on ${list}. Finish them anyway? They will count as 0-0 ties. Cancel leaves them open.`);
   const id = draw.id;
-  draw.games.forEach((game) => { if (hasTeams(game) && game.ends.length) game.final = true; });
+  draw.games.forEach((game) => { if (hasTeams(game) && (game.ends.length || finishUnplayed)) game.final = true; });
   draw.startedAt = 0;
   draw.leftMs = draw.minutes * 60000;
   render();
   try {
-    const { skipped } = await post('finishDraw', { id });
+    const { skipped } = await post('finishDraw', { id, unplayed: finishUnplayed });
     toast(skipped.length ? `Draw finished. Still open: ${skipped.map((item) => `Sheet ${item.sheet} (${item.reason})`).join(', ')}` : 'Draw finished');
   } catch (error) {
     toast(`Not saved: ${error.message}`);

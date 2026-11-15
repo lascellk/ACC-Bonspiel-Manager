@@ -170,3 +170,11 @@ test('an ad-hoc draw keeps its own points, a linked draw does not, and its resul
   admin(api, { action: 'goLive', id: linked });
   assert.equal(api.get().draw.scoring, null);
 });
+
+test('finish draw also finishes unplayed games when the scorer agrees', () => {
+  const { api, id } = withDraw();
+  scorer(api, { action: 'setEnd', drawId: id, sheet: 1, index: 0, end: { team: 0, pts: 1 } });
+  const result = scorer(api, { action: 'finishDraw', id, unplayed: true });
+  assert.deepEqual(result.skipped, []);
+  assert.deepEqual(api.get().draw.games.map((game) => game.final), [true, true, true, true]);
+});

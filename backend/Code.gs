@@ -528,8 +528,8 @@ function setFinal(body) {
 }
 
 // Finish draw on the scoring page: every game with at least one end scored becomes final, then the timer is
-// reset, which also takes the draw off the rink clock. A game with no ends, or one that can't finish (a tied
-// playoff game), stays open and is listed in skipped, so an unplayed sheet never counts as a 0-0 tie.
+// reset, which also takes the draw off the rink clock. A game with no ends stays open unless body.unplayed is true
+// (the scorer agreed it counts as a 0-0 tie). Open games, and any that can't finish (a tied playoff game), are listed in skipped.
 function finishDraw(body) {
   var draw = findDraw(body.id);
   var skipped = [];
@@ -537,7 +537,7 @@ function finishDraw(body) {
     return String(game.drawId) === String(draw.id) && String(game.final) !== 'true' && (game.team1 || game.team2);
   }).sort(function (a, b) { return Number(a.sheet) - Number(b.sheet); }).forEach(function (game) {
     var sheet = Number(game.sheet);
-    if (!JSON.parse(game.ends || '[]').length) { skipped.push({ sheet: sheet, reason: 'no ends scored' }); return; }
+    if (!body.unplayed && !JSON.parse(game.ends || '[]').length) { skipped.push({ sheet: sheet, reason: 'no ends scored' }); return; }
     try {
       setFinal({ drawId: draw.id, sheet: sheet, final: true });
     } catch (err) {
