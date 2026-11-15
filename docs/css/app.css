@@ -162,6 +162,8 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
   color: #fff;
 }
 .timer-bar .clock { font-size: 34px; line-height: 1; }
+.timer-buttons { display: flex; gap: 8px; }
+.timer-bar #reset-button { min-width: 0; }
 .timer-bar button { min-width: 124px; border-color: var(--gold); background: transparent; color: #fff; }
 .timer-bar button.primary { background: var(--gold); color: var(--navy); }
 .offline { padding: 6px 16px; background: var(--amber); color: #201400; font-size: 14px; text-align: center; }

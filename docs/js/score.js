@@ -17,6 +17,7 @@ function renderTimer() {
   button.hidden = phase === 'expired';
   button.textContent = labels[phase] || '';
   button.classList.toggle('primary', phase !== 'running');
+  $('#reset-button').hidden = phase === 'ready';
 }
 
 function renderSheets() {
@@ -158,6 +159,15 @@ $('#end-dialog').addEventListener('click', (event) => {
 $('#end-dialog').addEventListener('close', () => {
   openSheet = null;
   editIndex = null;
+});
+
+// Back to full time, stopped. The rink clock goes back to its logo too.
+$('#reset-button').addEventListener('click', () => {
+  if (!confirm('Reset the draw timer to full time? This also takes the draw off the rink clock.')) return;
+  draw.startedAt = 0;
+  draw.leftMs = draw.minutes * 60000;
+  run('timer', { id: draw.id, op: 'reset' });
+  render();
 });
 
 $('#timer-button').addEventListener('click', () => {

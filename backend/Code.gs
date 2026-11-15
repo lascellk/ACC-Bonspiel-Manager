@@ -427,7 +427,7 @@ function timerAction(body) {
 }
 
 // ----- Rink draw clock (the separate ACC Draw Clock app on the rink TV)
-// A bonspiel draw, or a hand-made draw linked to a bonspiel, also runs the rink clock: Start draw puts it
+// Any draw with Show timer ticked (bonspiel or ad-hoc) also runs the rink clock: Start draw puts it
 // on the clock, and pause, adjust and reset follow while the clock still shows it (league draws started on
 // the Draw Clock are left alone). Off unless Script Properties hold DRAW_CLOCK_URL (the Draw Clock's /exec
 // address) and DRAW_CLOCK_KEY (its SYNC_KEY). A failed call never stops the scoreboard timer.
