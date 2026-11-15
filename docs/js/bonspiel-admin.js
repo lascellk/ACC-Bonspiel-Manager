@@ -45,6 +45,7 @@ async function load() {
   $('#page-title').textContent = data.bonspiel.name;
   $('#event-link').href = `event.html?id=${id}`;
   $('#event-link').hidden = false;
+  $('#home-link').hidden = false;
   render();
 }
 
@@ -60,6 +61,7 @@ async function run(work, done) {
 
 function renderList() {
   $('#event-link').hidden = true;
+  $('#home-link').hidden = true;
   $('#content').innerHTML = `<section class="panel">
     <div class="panel-head"><h2>Bonspiels</h2><button type="button" class="primary" data-action="new">New bonspiel</button></div>
     ${list.length ? `<div class="draw-list">${list.map((item) => `<article class="draw-card">
@@ -433,6 +435,7 @@ $('#content').addEventListener('click', (event) => {
     data = null;
     step = 0;
     $('#steps').hidden = false;
+    $('#home-link').hidden = false;
     renderSteps();
     renderDetails();
   }
