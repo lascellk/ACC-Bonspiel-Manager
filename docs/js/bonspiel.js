@@ -536,3 +536,96 @@ export function sourceLabel(source, games) {
   if (!game) return 'To be decided';
   return `${source[0] === 'W' ? 'Winner' : 'Loser'} of ${game.bracket}`;
 }
+
+// ----- Making teams from players
+
+// A team's player fields, with the position each is filled from. The third plays vice.
+export const TEAM_PLACES = [['skip', 'skip'], ['third', 'vice'], ['second', 'second'], ['lead', 'lead']];
+const DRAW_ORDER = (drawTime) => (/early/i.test(drawTime) ? 0 : /late/i.test(drawTime) ? 2 : 1);
+
+// The cheapest way to give each row of a square cost matrix its own column (the Hungarian method).
+// Returns the column for each row.
+export function cheapestAssignment(cost) {
+  const n = cost.length;
+  const u = new Array(n + 1).fill(0);
+  const v = new Array(n + 1).fill(0);
+  const p = new Array(n + 1).fill(0); // p[column] = row, 1-based.
+  const way = new Array(n + 1).fill(0);
+  for (let i = 1; i <= n; i += 1) {
+    p[0] = i;
+    let j0 = 0;
+    const minv = new Array(n + 1).fill(Infinity);
+    const used = new Array(n + 1).fill(false);
+    do {
+      used[j0] = true;
+      const i0 = p[j0];
+      let delta = Infinity;
+      let j1 = 0;
+      for (let j = 1; j <= n; j += 1) {
+        if (used[j]) continue;
+        const cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= n; j += 1) {
+        if (used[j]) { u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta;
+      }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const column = new Array(n);
+  for (let j = 1; j <= n; j += 1) if (p[j]) column[p[j] - 1] = j - 1;
+  return column;
+}
+
+function shuffled(list, random) {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+// Puts players ({name, positions, status, drawTime}) into count teams of four. Each player gets a position they
+// ticked where possible, then players with nothing ticked fill the rest, and someone is only put where they didn't
+// want to be when there's no other way. Players with the same draw time preference go together. When the players
+// don't divide into fours, a paid player only sits out once every unpaid one has, and then whoever leaves the rest
+// in their positions.
+// random makes a different set of equally good teams each time.
+// Returns {teams: [{skip, third, second, lead}] of players, unplaced: [players]}.
+export function makeTeams(players, count, random = Math.random) {
+  const teams = Math.max(0, Math.min(count, Math.floor(players.length / 4)));
+  const order = shuffled(players, random);
+  const slots = [];
+  for (let t = 0; t < teams; t += 1) TEAM_PLACES.forEach(([field, position]) => slots.push({ field, position }));
+  while (slots.length < order.length) slots.push(null); // Sitting out.
+  const cost = order.map((player) => slots.map((slot) => {
+    if (!slot) return /^paid$/i.test(player.status) ? 20 : 0;
+    if (player.positions.includes(slot.position)) return 0;
+    return player.positions.length ? 10 : 1;
+  }));
+  const column = cheapestAssignment(cost);
+  const byField = Object.fromEntries(TEAM_PLACES.map(([field]) => [field, []]));
+  const unplaced = [];
+  order.forEach((player, i) => {
+    const slot = slots[column[i]];
+    if (slot) byField[slot.field].push(player); else unplaced.push(player);
+  });
+  // Sorting each position by draw time (a stable sort keeps the shuffle otherwise) lines up the early players.
+  Object.values(byField).forEach((list) => list.sort((a, b) => DRAW_ORDER(a.drawTime) - DRAW_ORDER(b.drawTime)));
+  return {
+    teams: Array.from({ length: teams }, (_, t) => Object.fromEntries(TEAM_PLACES.map(([field]) => [field, byField[field][t]]))),
+    unplaced,
+  };
+}
+
+// "Team <skip's last name>", or the skip's full name when two skips share a last name.
+export function teamNames(teams) {
+  const last = (team) => String(team.skip?.name || '').trim().split(/\s+/).pop();
+  return teams.map((team) => {
+    const clash = teams.filter((other) => last(other).toLowerCase() === last(team).toLowerCase()).length > 1;
+    return `Team ${clash ? team.skip.name : last(team)}`;
+  });
+}

@@ -1,8 +1,8 @@
 // Organiser page: details, teams, schedule, then running the event.
 import { configured, get, post } from './api.js';
 import {
-  assignDraws, assignPools, buildGames, bySeed, DEFAULT_SETTINGS, drawTimes, flatGames, FORMATS, MAX_TEAMS, nextRound, pairRound,
-  playoffSeeds, poolStandings, scheduleProblems, SHEETS, sourceLabel, STANDING_FIELDS, standingGames, standings, swapGames,
+  assignDraws, assignPools, buildGames, bySeed, DEFAULT_SETTINGS, drawTimes, flatGames, FORMATS, makeTeams, MAX_TEAMS, nextRound, pairRound,
+  playoffSeeds, poolStandings, scheduleProblems, SHEETS, sourceLabel, STANDING_FIELDS, standingGames, standings, swapGames, teamNames,
 } from './bonspiel.js';
 import { bracketHtml, linkedSchedule, scheduleHtml, standingsHtml } from './bonspiel-view.js';
 import { applyGameType, esc, gameTypeFields, loadLogos, logoHtml, logoOptions, notConfiguredNotice, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
@@ -19,6 +19,8 @@ let preview = null; // Generated draws, not yet saved.
 let picked = null; // The {draw, sheet} chosen first for a swap.
 let timing = { first: '', gap: 180, perDay: 4 };
 let editingStandings = false;
+let teamPreview = null; // Teams made from the players, not yet saved: {teams: [{name, named, skip, ...}], out, count, waiting}.
+let pickedPlayer = ''; // The first player tapped for a swap in the preview: 'team/field' or 'out/index'.
 let ccmEventList = null; // The CCM events, once loaded from the admin site.
 const ARCHIVE_WARNING = 'Archive this bonspiel? Its teams, draws and results are kept, but it leaves the public page and the admin choices, '
   + 'and the TV goes back to the scoreboard if it shows it. You can unarchive it any time.';
@@ -359,10 +361,12 @@ function renderTeams() {
   const { teams, bonspiel, players } = data;
   const usesPools = bonspiel.format === 'pools';
   const placed = players.filter((player) => playersOnTeams().has(nameKey(player.name))).length;
+  const canMake = freePlayers(true).length >= 4 && teams.length < MAX_TEAMS && !teamPreview;
   $('#content').innerHTML = `<section class="panel">
     <div class="panel-head">
       <div><h2>Teams</h2><p>${teams.length} of ${MAX_TEAMS}${players.length ? ` · ${placed} of ${players.length} players on a team` : ''}</p></div>
       <div class="button-row">
+        ${canMake ? '<button type="button" data-action="make-teams">Make teams from players</button>' : ''}
         ${usesPools ? '<button type="button" data-action="assign-pools">Assign pools</button>' : ''}
         <button type="button" class="primary" data-action="add-team" ${teams.length >= MAX_TEAMS ? 'disabled' : ''}>Add team</button>
       </div>
@@ -374,7 +378,97 @@ function renderTeams() {
       <button type="button" data-team="${esc(team.id)}">Edit</button>
       <button type="button" class="danger" data-remove-team="${esc(team.id)}">Delete</button>
     </li>`).join('')}</ul>` : '<p class="empty">No teams yet.</p>'}
+  </section>${teamPreview ? teamPreviewHtml() : ''}`;
+}
+
+// ----- Making teams from the players
+
+// Players not yet on a team, leaving out the waiting list unless asked.
+function freePlayers(waiting) {
+  const taken = playersOnTeams();
+  return data.players.filter((player) => !taken.has(nameKey(player.name)) && (waiting || !/waiting/i.test(player.status)));
+}
+
+const roomForTeams = () => MAX_TEAMS - data.teams.length;
+
+function makePreview(count, waiting) {
+  const players = freePlayers(waiting);
+  const most = Math.min(Math.floor(players.length / 4), roomForTeams());
+  const made = makeTeams(players, Math.min(count ?? most, most));
+  const names = teamNames(made.teams);
+  teamPreview = { teams: made.teams.map((team, i) => ({ ...team, name: names[i], named: false })), out: made.unplaced, most, waiting };
+  pickedPlayer = '';
+}
+
+// Teams named after their skip follow a new skip after a swap. A typed name stays.
+function renameFromSkips() {
+  const names = teamNames(teamPreview.teams);
+  teamPreview.teams.forEach((team, i) => { if (!team.named) team.name = names[i]; });
+}
+
+function previewPlayerHtml(player, key, position) {
+  const fit = !position ? '' : player.positions.includes(position) ? 'fit' : player.positions.length ? 'misfit' : '';
+  const wants = player.positions.length ? `Prefers ${player.positions.map((p) => POSITIONS.find(([k]) => k === p)[1]).join(', ')}` : 'No preference';
+  const draw = /no pref/i.test(player.drawTime) ? '' : player.drawTime;
+  const extra = [wants, draw, /waiting/i.test(player.status) ? 'Waiting list' : ''].filter(Boolean).join(' · ');
+  return `<button type="button" class="pick ${fit} ${pickedPlayer === key ? 'on' : ''}" data-pick="${key}">${esc(player.name)}<small>${esc(extra)}</small></button>`;
+}
+
+function teamPreviewHtml() {
+  const { teams, out, most, waiting } = teamPreview;
+  const misfits = teams.reduce((n, team) => n + TEAM_SPOTS.filter(([field, , position]) =>
+    team[field].positions.length && !team[field].positions.includes(position)).length, 0);
+  return `<section class="panel">
+    <div class="panel-head">
+      <div><h2>Suggested teams</h2><p>Not saved yet. Tap two players to swap them. Green is a position the player ticked${misfits ? `, and orange is one they didn't (${misfits})` : ''}.</p></div>
+      <div class="button-row">
+        <button type="button" data-action="shuffle-teams">Shuffle</button>
+        <button type="button" data-action="discard-teams">Discard</button>
+        <button type="button" class="primary" data-action="save-teams" ${teams.length ? '' : 'disabled'}>Save ${teams.length} ${teams.length === 1 ? 'team' : 'teams'}</button>
+      </div>
+    </div>
+    <div class="button-row team-options">
+      <label>Teams to make <input type="number" name="teamCount" min="1" max="${most}" value="${teams.length}"></label>
+      <label class="check"><input type="checkbox" name="includeWaiting" ${waiting ? 'checked' : ''}> Include the waiting list</label>
+    </div>
+    ${teams.length ? `<div class="table-scroll"><table class="standings made-teams">
+      <thead><tr><th class="left">Team</th>${TEAM_SPOTS.map(([, label]) => `<th class="left">${label}</th>`).join('')}</tr></thead>
+      <tbody>${teams.map((team, t) => `<tr>
+        <td class="left"><input name="madeName" data-team="${t}" value="${esc(team.name)}" maxlength="40" aria-label="Team name"></td>
+        ${TEAM_SPOTS.map(([field, , position]) => `<td class="left">${previewPlayerHtml(team[field], `${t}/${field}`, position)}</td>`).join('')}
+      </tr>`).join('')}</tbody>
+    </table></div>` : '<p class="empty">Not enough players for a team.</p>'}
+    ${out.length ? `<h3 class="made-out">Not on a team (${out.length})</h3><div class="button-row">${out.map((player, i) => previewPlayerHtml(player, `out/${i}`, '')).join('')}</div>` : ''}
   </section>`;
+}
+
+function madeSlot(key) {
+  const [where, which] = key.split('/');
+  return where === 'out' ? { list: teamPreview.out, at: Number(which) } : { list: teamPreview.teams[Number(where)], at: which };
+}
+
+function pickPreviewPlayer(key) {
+  if (!pickedPlayer || pickedPlayer === key) {
+    pickedPlayer = pickedPlayer === key ? '' : key;
+  } else {
+    const a = madeSlot(pickedPlayer);
+    const b = madeSlot(key);
+    [a.list[a.at], b.list[b.at]] = [b.list[b.at], a.list[a.at]];
+    pickedPlayer = '';
+    renameFromSkips();
+  }
+  renderTeams();
+}
+
+function saveMadeTeams() {
+  const teams = teamPreview.teams.map((team, i) => ({
+    name: team.name.trim() || team.skip.name, skip: team.skip.name, third: team.third.name, second: team.second.name,
+    lead: team.lead.name, seed: data.teams.length + i + 1,
+  }));
+  run(async () => {
+    await post('addTeams', { bonspielId: data.bonspiel.id, teams });
+    teamPreview = null;
+  }, `${teams.length} ${teams.length === 1 ? 'team' : 'teams'} saved`);
 }
 
 function openTeam(team) {
@@ -592,11 +686,17 @@ $('#steps').addEventListener('click', (event) => {
   if (value === undefined) return;
   step = Number(value);
   editingStandings = false;
+  teamPreview = null;
   load().catch((error) => toast(error.message));
 });
 
 $('#content').addEventListener('change', (event) => {
   if (event.target.dataset.position) savePositions(event.target.closest('tr'));
+  if (['teamCount', 'includeWaiting'].includes(event.target.name)) {
+    const count = Number($('[name=teamCount]').value) || 1;
+    makePreview(event.target.name === 'teamCount' ? count : undefined, $('[name=includeWaiting]').checked);
+    renderTeams();
+  }
   if (event.target.name === 'source') {
     event.target.form.elements.ccmEvent.hidden = event.target.value !== 'ccm';
     if (event.target.value === 'ccm') loadCcmEvents();
@@ -612,6 +712,13 @@ $('#content').addEventListener('change', (event) => {
   if (event.target.name === 'gameType') applyGameType(event.target.form);
   if (event.target.name === 'standingsView') saveStandingsView(event.target.value);
   if (event.target.dataset.time !== undefined) preview[Number(event.target.dataset.time)].startsAt = event.target.value;
+});
+
+$('#content').addEventListener('input', (event) => {
+  if (event.target.name !== 'madeName') return;
+  const team = teamPreview.teams[Number(event.target.dataset.team)];
+  team.name = event.target.value;
+  team.named = true;
 });
 
 $('#content').addEventListener('submit', (event) => {
@@ -632,7 +739,17 @@ $('#content').addEventListener('submit', (event) => {
 $('#content').addEventListener('click', (event) => {
   const button = event.target.closest('button');
   if (!button) return;
-  const { action, open, team, removeTeam, slot, live, stopLive, editPlayer, removePlayer } = button.dataset;
+  const { action, open, team, removeTeam, slot, live, stopLive, editPlayer, removePlayer, pick } = button.dataset;
+  if (action === 'make-teams' || action === 'shuffle-teams') {
+    makePreview(teamPreview ? teamPreview.teams.length : undefined, teamPreview?.waiting || false);
+    renderTeams();
+  }
+  if (action === 'discard-teams') {
+    teamPreview = null;
+    renderTeams();
+  }
+  if (action === 'save-teams') saveMadeTeams();
+  if (pick) pickPreviewPlayer(pick);
   if (action === 'import-players') {
     toast('Getting the players from CCM…');
     let done = '';
@@ -746,6 +863,7 @@ $('#team-dialog').addEventListener('submit', (event) => {
 window.addEventListener('popstate', () => {
   step = 0;
   preview = null;
+  teamPreview = null;
   load().catch((error) => toast(error.message));
 });
 

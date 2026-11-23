@@ -55,6 +55,7 @@ var ACTIONS = {
   deleteBonspiel: { role: 'admin', fn: deleteBonspiel },
   archiveBonspiel: { role: 'admin', fn: archiveBonspiel },
   saveTeam: { role: 'admin', fn: saveTeam },
+  addTeams: { role: 'admin', fn: addTeams },
   deleteTeam: { role: 'admin', fn: deleteTeam },
   saveSeeding: { role: 'admin', fn: saveSeeding },
   saveStandings: { role: 'admin', fn: saveStandings },
@@ -921,15 +922,7 @@ function saveTeam(body) {
   if (!row && teams.length >= MAX_TEAMS) throw new Error('A bonspiel can have up to ' + MAX_TEAMS + ' teams');
   var item = row || { id: Utilities.getUuid().slice(0, 8), bonspielId: input.bonspielId };
   var oldName = row ? String(row.name) : '';
-  item.skip = cleanText(input.skip, 40);
-  item.name = cleanText(input.name, 40) || item.skip || 'Team';
-  item.third = cleanText(input.third, 40);
-  item.second = cleanText(input.second, 40);
-  item.lead = cleanText(input.lead, 40);
-  item.club = cleanText(input.club, 60);
-  item.logo = cleanText(input.logo, 40);
-  item.seed = input.seed ? wholeNumber(input.seed, 0, 0, MAX_TEAMS) : '';
-  item.pool = cleanText(input.pool, 2);
+  teamFields(item, input);
   if (row) writeRow('Teams', row._row, item); else appendRow('Teams', item);
   // A renamed team shows its new name on games already scheduled.
   gamesOf(drawsOf(input.bonspielId)).forEach(function (game) {
@@ -953,6 +946,32 @@ function saveTeam(body) {
     if (changed) writeRow('Games', game._row, game);
   });
   return { id: item.id };
+}
+
+function teamFields(item, input) {
+  item.skip = cleanText(input.skip, 40);
+  item.name = cleanText(input.name, 40) || item.skip || 'Team';
+  item.third = cleanText(input.third, 40);
+  item.second = cleanText(input.second, 40);
+  item.lead = cleanText(input.lead, 40);
+  item.club = cleanText(input.club, 60);
+  item.logo = cleanText(input.logo, 40);
+  item.seed = input.seed ? wholeNumber(input.seed, 0, 0, MAX_TEAMS) : '';
+  item.pool = cleanText(input.pool, 2);
+  return item;
+}
+
+// Several new teams in one write, for teams made from the players.
+function addTeams(body) {
+  findBonspiel(body.bonspielId);
+  var input = body.teams || [];
+  if (!input.length) throw new Error('There are no teams to add');
+  if (teamsOf(body.bonspielId).length + input.length > MAX_TEAMS) throw new Error('A bonspiel can have up to ' + MAX_TEAMS + ' teams');
+  var items = input.map(function (team) {
+    return teamFields({ id: Utilities.getUuid().slice(0, 8), bonspielId: String(body.bonspielId) }, team);
+  });
+  appendRows('Teams', items);
+  return { ids: items.map(function (item) { return item.id; }) };
 }
 
 function deleteTeam(body) {

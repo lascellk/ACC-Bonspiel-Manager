@@ -110,3 +110,19 @@ test('saving details keeps the CCM event unless it is changed, and deleting the 
   admin(api, { action: 'deleteBonspiel', id });
   assert.equal(api.tabs.Players.rows.length, 1); // Only the header row is left.
 });
+
+test('several teams are added in one go, within the team limit', () => {
+  const api = loadBackend();
+  const id = linked(api);
+  assert.equal(scorer(api, { action: 'addTeams', bonspielId: id, teams: [{ name: 'A' }] }).ok, false);
+  assert.match(admin(api, { action: 'addTeams', bonspielId: id, teams: [] }).error, /no teams/);
+  const added = admin(api, { action: 'addTeams', bonspielId: id, teams: [
+    { name: ' Team Archer ', skip: 'Ann Archer', third: 'Bob Baker', second: 'Cy Cole', lead: 'Di Dunn', seed: 1 },
+    { skip: 'Ed Ellis' },
+  ] });
+  assert.equal(added.ok, true, added.error);
+  const teams = api.get({ action: 'bonspiel', id }).teams;
+  assert.deepEqual(teams.map((team) => [team.name, team.skip, team.lead, team.seed]), [['Team Archer', 'Ann Archer', 'Di Dunn', 1], ['Ed Ellis', 'Ed Ellis', '', 0]]);
+  const many = Array.from({ length: 15 }, (_, i) => ({ name: `T${i}` }));
+  assert.match(admin(api, { action: 'addTeams', bonspielId: id, teams: many }).error, /up to 16/);
+});

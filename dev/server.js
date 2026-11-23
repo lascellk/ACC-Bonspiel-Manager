@@ -10,13 +10,17 @@ const root = fileURLToPath(new URL('../docs', import.meta.url));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const backend = loadBackend();
 // The club admin site isn't reachable here, so CCM events come from these made-up registrations.
-backend.context.ccmRegistrants = () => [
-  ['1', 'Ann Archer', 'Paid', 'Early Draw', 'Happy to skip', 'Skip'], ['2', 'Bob Baker', 'Pending', 'No preference', '', 'Mate'],
-  ['3', 'Cy Cole', 'Cancelled', '', '', ''], ['4', 'Di Dunn', 'Waiting List', 'Late Draw', 'Can play with Ann', 'Lead'],
-].map(([id, name, status, drawTime, notes, position]) => ({
-  id, eventId: '190', event: 'Sample Turkey Spiel', eventDate: '2026-11-21', name, email: `${name.split(' ')[0].toLowerCase()}@example.com`,
-  status, drawTime, notes, positions: position ? [{ Mate: 'vice' }[position] || position.toLowerCase()] : [],
-})).concat([{ id: '9', eventId: '150', event: 'Sample Spring Spiel', eventDate: '2026-03-21', name: 'Ed Ellis', email: '', status: 'Paid', drawTime: '', notes: '', positions: [] }]);
+backend.context.ccmRegistrants = () => {
+  const first = ['Ann', 'Bob', 'Cy', 'Di', 'Ed', 'Fay', 'Gus', 'Hal', 'Ida', 'Jo', 'Kim', 'Lou', 'Max', 'Ned', 'Oli', 'Pat', 'Quin', 'Ros', 'Sam', 'Tia', 'Uma', 'Vic'];
+  const wants = ['Skip', 'Mate', 'Second', 'Lead', 'No Preference', 'Skip', 'Lead', 'No Preference', 'Mate', 'Second', 'Lead'];
+  const draws = ['Early Draw', 'Late Draw', 'No preference'];
+  const statuses = ['Paid', 'Pending', 'Paid', 'Paid', 'Pending', 'Cancelled', 'Paid', 'Paid', 'Pending', 'Paid', 'Paid', 'Waiting List'];
+  return first.map((name, i) => ({
+    id: String(i + 1), eventId: '190', event: 'Sample Turkey Spiel', eventDate: '2026-11-21', name: `${name} Sample${i + 1}`,
+    email: `${name.toLowerCase()}@example.com`, status: statuses[i % statuses.length], drawTime: draws[i % 3],
+    notes: i === 3 ? 'Can play with Ann' : '', positions: ({ Skip: ['skip'], Mate: ['vice'], Second: ['second'], Lead: ['lead'] })[wants[i % wants.length]] || [],
+  })).concat([{ id: '99', eventId: '150', event: 'Sample Spring Spiel', eventDate: '2026-03-21', name: 'Ed Ellis', email: '', status: 'Paid', drawTime: '', notes: '', positions: [] }]);
+};
 const port = Number(process.env.PORT) || 8787;
 
 createServer(async (req, res) => {

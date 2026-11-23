@@ -527,3 +527,15 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 .copied textarea { width: 100%; font: inherit; font-size: 13px; }
 .reminder { padding: 10px 12px; border-left: 4px solid var(--gold); border-radius: 6px; background: color-mix(in srgb, var(--gold) 16%, var(--card)); }
 .copied footer button { width: 100%; }
+.team-options { align-items: center; margin-bottom: 8px; }
+.team-options label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.team-options input[type=number] { width: 70px; }
+.made-teams td { padding: 3px; vertical-align: top; }
+.made-teams input { width: 100%; min-width: 130px; }
+.pick { display: block; width: 100%; min-width: 130px; min-height: 0; padding: 4px 8px; text-align: left; font-weight: 600; line-height: 1.25; }
+.pick small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+.button-row .pick { width: auto; }
+.pick.fit { border-color: #4caf6a; background: color-mix(in srgb, #4caf6a 14%, var(--card)); }
+.pick.misfit { border-color: #e0912f; background: color-mix(in srgb, #e0912f 16%, var(--card)); }
+.pick.on { outline: 3px solid var(--gold); outline-offset: 1px; }
+.made-out { margin: 12px 0 6px; font-size: 15px; }
