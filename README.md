@@ -157,4 +157,5 @@ npm run dev   # http://localhost:8787, admin PIN 1234, score PIN 0000
 
 - Apps Script is free but not instant. The first request after a quiet spell can take a few seconds.
 - The two PINs keep casual visitors out. They are not strong security, and the scoreboard itself is public to anyone with the link.
+- To stop anyone guessing a PIN, each wrong PIN takes a second to answer, and after 10 wrong PINs every PIN, even the right one, is refused for 15 minutes from the last wrong one, as in the 50/50 app. This locks out the organisers and scorers too, so if it happens during an event, open the Apps Script project, choose `clearPinLockout` and click **Run** to lift it straight away. If someone is really guessing, change the PINs in **Project Settings → Script properties** too.
 - The original artwork in `Reference/` is kept out of the repository. The site uses the smaller copies in `docs/assets/`.

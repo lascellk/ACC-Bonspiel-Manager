@@ -21,7 +21,10 @@ var FORMATS = ['pools', 'fixed', 'single', 'double'];
 var MAX_TEAMS = 16;
 var SHEETS = 4;
 var MAX_LOGO_CHARS = 45000; // A Sheet cell holds 50,000 characters.
+// Wrong PINs allowed within PIN_LOCK_SECONDS of the last one, before every PIN is refused until that time passes.
+// As in the 50/50 app, so guessing a 4-digit PIN takes days.
 var MAX_PIN_FAILURES = 10;
+var PIN_LOCK_SECONDS = 15 * 60;
 var STANDING_FIELDS = ['played', 'won', 'tied', 'lost', 'endsWon', 'scored', 'points', 'diff'];
 var SPIN_MAX_MS = 30 * 60000; // The wheels leave the TV by themselves if the admin page goes away.
 
@@ -129,16 +132,25 @@ function respond(work) {
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
 
+// Run from the editor to lift a PIN lockout straight away, for example when it happens during an event.
+function clearPinLockout() {
+  CacheService.getScriptCache().remove('pin-failures');
+  console.log('PIN lockout cleared.');
+}
+
 function checkPin(pin, role) {
   var cache = CacheService.getScriptCache();
   var failures = Number(cache.get('pin-failures')) || 0;
-  if (failures >= MAX_PIN_FAILURES) throw new Error('Too many wrong PINs. Try again in 5 minutes.');
+  if (failures >= MAX_PIN_FAILURES) throw new Error('Too many wrong PINs. Try again in 15 minutes.');
   var props = PropertiesService.getScriptProperties();
   var adminPin = props.getProperty('ADMIN_PIN');
   var scorePin = props.getProperty('SCORE_PIN');
   pin = String(pin === undefined ? '' : pin);
   var held = pin && pin === adminPin ? 'admin' : pin && pin === scorePin ? 'score' : '';
-  if (!held) cache.put('pin-failures', String(failures + 1), 300);
+  if (!held) {
+    cache.put('pin-failures', String(failures + 1), PIN_LOCK_SECONDS);
+    Utilities.sleep(1000); // Slows down guessing.
+  }
   if (!held || (role === 'admin' && held !== 'admin')) throw new Error('Wrong PIN');
   return held;
 }

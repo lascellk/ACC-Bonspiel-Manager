@@ -41,10 +41,13 @@ test('an unset PIN never matches a blank one', () => {
   assert.equal(api.post({ pin: '', action: 'login' }).ok, false);
   assert.equal(api.post({ pin: 'null', action: 'login' }).ok, false);
 });
-test('repeated wrong PINs lock out even the right one', () => {
+test('ten wrong PINs lock out even the right one, for 15 minutes', () => {
   const { api } = withDraw();
-  for (let i = 0; i < 10; i++) api.post({ pin: 'x', action: 'login' });
-  assert.match(api.post({ pin: '1234', action: 'login' }).error, /Too many/);
+  for (let i = 0; i < 9; i++) api.post({ pin: 'x', action: 'login' });
+  assert.equal(api.post({ pin: '1234', action: 'login' }).ok, true);
+  api.post({ pin: 'x', action: 'login' });
+  assert.match(api.post({ pin: '1234', action: 'login' }).error, /Too many wrong PINs. Try again in 15 minutes/);
+  assert.match(api.post({ pin: '0000', action: 'setEnd' }).error, /Too many/);
 });
 test('login reports which role the PIN holds', () => {
   const { api } = withDraw();
@@ -206,4 +209,12 @@ test('an archived logo is kept, still used, and can be unarchived', () => {
   assert.equal(api.get({ action: 'logos' }).logos[0].archived, true);
   admin(api, { action: 'archiveLogo', id, archived: false });
   assert.equal(api.get({ action: 'logos' }).logos[0].archived, false);
+});
+
+test('a PIN lockout can be lifted from the editor', () => {
+  const { api } = withDraw();
+  for (let i = 0; i < 10; i++) api.post({ pin: 'x', action: 'login' });
+  assert.equal(api.post({ pin: '1234', action: 'login' }).ok, false);
+  api.context.clearPinLockout();
+  assert.equal(api.post({ pin: '1234', action: 'login' }).ok, true);
 });

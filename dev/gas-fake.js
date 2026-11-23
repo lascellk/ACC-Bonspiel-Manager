@@ -43,6 +43,7 @@ export function loadBackend(properties = { ADMIN_PIN: '1234', SCORE_PIN: '0000' 
       getScriptCache: () => ({
         get: (key) => cache.get(key) ?? null,
         put: (key, value) => { cache.set(key, value); },
+        remove: (key) => { cache.delete(key); },
       }),
     },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
@@ -50,7 +51,7 @@ export function loadBackend(properties = { ADMIN_PIN: '1234', SCORE_PIN: '0000' 
       MimeType: { JSON: 'json' },
       createTextOutput: (text) => ({ setMimeType() { return text; } }),
     },
-    Utilities: { getUuid: () => crypto.randomUUID(), formatDate: (date, zone) => date.toLocaleDateString('en-CA', { timeZone: zone }) },
+    Utilities: { getUuid: () => crypto.randomUUID(), sleep: () => {}, formatDate: (date, zone) => date.toLocaleDateString('en-CA', { timeZone: zone }) },
     // Records calls to the rink Draw Clock; set fetchReply to change or throw the answer.
     UrlFetchApp: {
       fetch: (url, options) => {
