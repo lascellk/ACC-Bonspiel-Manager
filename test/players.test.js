@@ -37,13 +37,19 @@ test('the export is read into players, with dates, names and preferred positions
   assert.throws(() => api.context.registrantsFromRows([['ID', 'Event'], ['1', 'x']]), /no Event ID column/);
 });
 
-test('CCM events are listed newest first, counting players who have not cancelled', () => {
+test('CCM events are from this season, newest first, counting players who have not cancelled', () => {
   const api = loadBackend();
-  withExport(api, [row('1', '190', 'Ann'), row('2', '190', 'Bob', 'Cancelled'), row('3', '150', 'Cy')]);
+  const on = (date) => ({ 'Event Date': date });
+  const regs = api.context.registrantsFromRows([HEAD, row('1', '190', 'Ann'), row('2', '190', 'Bob', 'Cancelled'),
+    row('3', '150', 'Cy', 'Paid', on('05-30-2027 9:00 am')), row('4', '120', 'Di', 'Paid', on('06-01-2026 9:00 am')),
+    row('5', '100', 'Ed', 'Paid', on('05-31-2026 9:00 am')), row('6', '200', 'Fy', 'Paid', on('06-01-2027 9:00 am'))]);
+  const events = JSON.parse(JSON.stringify(api.context.ccmEventsIn(regs, '2026-11-23'))); // Out of the backend's sandbox.
+  assert.deepEqual(events.events.map((event) => [event.id, event.players]), [['150', 1], ['190', 1], ['120', 1]]);
+  assert.equal(events.events[1].name, '2026-27 Turkey Spiel');
+  // In May the season is still the one that started the June before.
+  assert.deepEqual([...api.context.ccmEventsIn(regs, '2027-05-31').events.map((event) => event.id)], ['150', '190', '120']);
+  withExport(api, [row('1', '190', 'Ann')]);
   assert.equal(scorer(api, { action: 'ccmEvents' }).ok, false);
-  const { events } = admin(api, { action: 'ccmEvents' });
-  assert.deepEqual(events.map((event) => [event.id, event.players]), [['190', 1], ['150', 1]]);
-  assert.equal(events[0].name, '2026-27 Turkey Spiel');
 });
 
 test('importing adds, updates and removes CCM players, keeping ticked positions and hand-added players', () => {

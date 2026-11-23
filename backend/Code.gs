@@ -811,11 +811,23 @@ function toPlayer(row) {
   };
 }
 
-// The events in the registrant export, newest first, for linking a bonspiel. players leaves out cancellations.
+// The season a 'YYYY-MM-DD' date falls in, by its first year. A season runs from June 1, as in the Payment Tracker.
+function seasonOf(date) {
+  var year = Number(String(date).slice(0, 4));
+  return Number(String(date).slice(5, 7)) >= 6 ? year : year - 1;
+}
+
 function ccmEvents() {
+  return ccmEventsIn(ccmRegistrants(), Utilities.formatDate(new Date(), 'America/Toronto', 'yyyy-MM-dd'));
+}
+
+// This season's events in the registrant export, newest first, for linking a bonspiel. players leaves out
+// cancellations. today is 'YYYY-MM-DD'.
+function ccmEventsIn(registrants, today) {
+  var season = seasonOf(today);
   var events = {};
-  ccmRegistrants().forEach(function (reg) {
-    if (!reg.eventId) return;
+  registrants.forEach(function (reg) {
+    if (!reg.eventId || seasonOf(reg.eventDate) !== season) return;
     var event = events[reg.eventId] || (events[reg.eventId] = { id: reg.eventId, name: reg.event, date: reg.eventDate, players: 0 });
     if (!/cancel/i.test(reg.status)) event.players += 1;
   });

@@ -50,7 +50,7 @@ export function loadBackend(properties = { ADMIN_PIN: '1234', SCORE_PIN: '0000' 
       MimeType: { JSON: 'json' },
       createTextOutput: (text) => ({ setMimeType() { return text; } }),
     },
-    Utilities: { getUuid: () => crypto.randomUUID() },
+    Utilities: { getUuid: () => crypto.randomUUID(), formatDate: (date, zone) => date.toLocaleDateString('en-CA', { timeZone: zone }) },
     // Records calls to the rink Draw Clock; set fetchReply to change or throw the answer.
     UrlFetchApp: {
       fetch: (url, options) => {
