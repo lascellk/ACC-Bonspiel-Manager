@@ -22,6 +22,7 @@ Keep this file up to date without being asked. As work goes on, add any decision
 
 - Git, Node LTS and `npm install -g @google/clasp`.
 - `clasp login --user clubmgr`. The login is stored per computer and is never committed.
+- At the start of each session, run `clasp --user clubmgr show-authorized-user` and check it says clubmgr@almontecurling.ca. The default clasp login on keith-t430 is rentals@almontecurling.ca (Rental Manager), so never run clasp here without `--user clubmgr`.
 - `Reference/` holds the original artwork and is not in the repository.
 - Before starting any change, `git pull --ff-only` so work starts from the latest GitHub code (the user works from several computers). If it can't fast-forward, stop and tell the user. Push when finished, never force-push.
 
