@@ -245,7 +245,9 @@ function saveDetails(form) {
 
 // ----- 2. Players
 
-const playerOrder = (a, b) => Number(/waiting/i.test(a.status)) - Number(/waiting/i.test(b.status)) || a.name.localeCompare(b.name);
+// The waiting list last, and players who registered together next to each other.
+const playerOrder = (a, b) => Number(/waiting/i.test(a.status)) - Number(/waiting/i.test(b.status))
+  || (a.group || a.name).localeCompare(b.group || b.name) || a.name.localeCompare(b.name);
 
 function renderPlayers() {
   const { players, bonspiel } = data;
@@ -266,7 +268,7 @@ function renderPlayers() {
       <thead><tr><th class="left">Name</th><th class="left">Email</th><th class="left">Status</th>
         ${POSITIONS.map(([, label]) => `<th>${label}</th>`).join('')}<th class="left">Notes</th><th></th></tr></thead>
       <tbody>${[...players].sort(playerOrder).map((player) => `<tr data-player="${esc(player.id)}">
-        <td class="left"><b>${esc(player.name)}</b>${player.drawTime ? `<small>${esc(player.drawTime)}</small>` : ''}</td>
+        <td class="left"><b>${esc(player.name)}</b>${player.group ? `<small>Registered with ${esc(player.group)}'s team</small>` : ''}${player.drawTime ? `<small>${esc(player.drawTime)}</small>` : ''}</td>
         <td class="left">${player.email ? `<a href="mailto:${esc(player.email)}">${esc(player.email)}</a>` : ''}</td>
         <td class="left">${player.ccmId ? `<span class="status status-${esc(player.status.toLowerCase().replace(/\W+/g, '-'))}">${esc(player.status)}</span>` : '<span class="status">By hand</span>'}</td>
         ${POSITIONS.map(([key, label]) => `<td><input type="checkbox" data-position="${key}" aria-label="${label}" ${player.positions.includes(key) ? 'checked' : ''}></td>`).join('')}
@@ -416,11 +418,13 @@ function previewPlayerHtml(player, key, position) {
 
 function teamPreviewHtml() {
   const { teams, out, most, waiting } = teamPreview;
+  // How many of a team's players registered with its group, which a swap can change.
+  const together = (team) => (team.group ? TEAM_SPOTS.filter(([field]) => team[field].group === team.group).length : 0);
   const misfits = teams.reduce((n, team) => n + TEAM_SPOTS.filter(([field, , position]) =>
     team[field].positions.length && !team[field].positions.includes(position)).length, 0);
   return `<section class="panel">
     <div class="panel-head">
-      <div><h2>Suggested teams</h2><p>Not saved yet. Tap two players to swap them. Green is a position the player ticked${misfits ? `, and orange is one they didn't (${misfits})` : ''}.</p></div>
+      <div><h2>Suggested teams</h2><p>Not saved yet. Players who registered together are kept together. Tap two players to swap them. Green is a position the player ticked${misfits ? `, and orange is one they didn't (${misfits})` : ''}.</p></div>
       <div class="button-row">
         <button type="button" data-action="shuffle-teams">Shuffle</button>
         <button type="button" data-action="discard-teams">Discard</button>
@@ -434,7 +438,8 @@ function teamPreviewHtml() {
     ${teams.length ? `<div class="table-scroll"><table class="standings made-teams">
       <thead><tr><th class="left">Team</th>${TEAM_SPOTS.map(([, label]) => `<th class="left">${label}</th>`).join('')}</tr></thead>
       <tbody>${teams.map((team, t) => `<tr>
-        <td class="left"><input name="madeName" data-team="${t}" value="${esc(team.name)}" maxlength="40" aria-label="Team name"></td>
+        <td class="left"><input name="madeName" data-team="${t}" value="${esc(team.name)}" maxlength="40" aria-label="Team name">
+          ${together(team) > 1 ? `<small class="registered">${together(team) === 4 ? 'Registered as a team' : `${together(team)} registered together`}</small>` : ''}</td>
         ${TEAM_SPOTS.map(([field, , position]) => `<td class="left">${previewPlayerHtml(team[field], `${t}/${field}`, position)}</td>`).join('')}
       </tr>`).join('')}</tbody>
     </table></div>` : '<p class="empty">Not enough players for a team.</p>'}

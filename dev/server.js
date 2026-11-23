@@ -18,6 +18,7 @@ backend.context.ccmRegistrants = () => {
   return first.map((name, i) => ({
     id: String(i + 1), eventId: '190', event: 'Sample Turkey Spiel', eventDate: '2026-11-21', name: `${name} Sample${i + 1}`,
     email: `${name.toLowerCase()}@example.com`, status: statuses[i % statuses.length], drawTime: draws[i % 3],
+    group: i < 4 ? 'Ann Sample1' : i >= 6 && i < 9 ? 'Gus Sample7' : '',
     notes: i === 3 ? 'Can play with Ann' : '', positions: ({ Skip: ['skip'], Mate: ['vice'], Second: ['second'], Lead: ['lead'] })[wants[i % wants.length]] || [],
   })).concat([{ id: '99', eventId: '150', event: 'Sample Spring Spiel', eventDate: '2026-03-21', name: 'Ed Ellis', email: '', status: 'Paid', drawTime: '', notes: '', positions: [] }]);
 };

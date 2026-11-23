@@ -542,3 +542,4 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 .archived-draws { grid-column: 1 / -1; }
 .archived-draws summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
 .archived-draws .note { margin: 4px 0 8px; }
+.made-teams small.registered { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }

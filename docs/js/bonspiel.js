@@ -588,37 +588,73 @@ function shuffled(list, random) {
   return out;
 }
 
-// Puts players ({name, positions, status, drawTime}) into count teams of four. Each player gets a position they
-// ticked where possible, then players with nothing ticked fill the rest, and someone is only put where they didn't
-// want to be when there's no other way. Players with the same draw time preference go together. When the players
-// don't divide into fours, a paid player only sits out once every unpaid one has, and then whoever leaves the rest
-// in their positions.
+// How well a player suits a position: 0 for one they ticked, 1 when they ticked none, 10 for one they didn't tick.
+const fitCost = (player, position) => (player.positions.includes(position) ? 0 : player.positions.length ? 10 : 1);
+
+// The best positions for up to four players who play together: {skip, third, ...} with the unfilled ones left out.
+function positionsFor(members, random) {
+  const order = shuffled(members, random);
+  const cost = [...order.map((player) => TEAM_PLACES.map(([, position]) => fitCost(player, position))),
+    ...Array.from({ length: 4 - order.length }, () => [0, 0, 0, 0])];
+  const column = cheapestAssignment(cost);
+  return Object.fromEntries(order.map((player, i) => [TEAM_PLACES[column[i]][0], player]));
+}
+
+// Puts players ({name, positions, status, drawTime, group}) into count teams of four.
+// - Players who registered together (the same group) stay together: four as a team of their own, two or three on a
+//   team that others fill. A fifth or more joins the other players. Registered teams never sit out.
+// - Each player gets a position they ticked where possible, then players with nothing ticked fill the rest, and
+//   someone is only put where they didn't want to be when there's no other way.
+// - The other players with the same draw time preference go together.
+// - When the players don't divide into fours, a paid player only sits out once every unpaid one has, and then
+//   whoever leaves the rest in their positions.
 // random makes a different set of equally good teams each time.
-// Returns {teams: [{skip, third, second, lead}] of players, unplaced: [players]}.
+// Returns {teams: [{skip, third, second, lead, group}] of players, group being '' for a made-up team, unplaced}.
 export function makeTeams(players, count, random = Math.random) {
-  const teams = Math.max(0, Math.min(count, Math.floor(players.length / 4)));
-  const order = shuffled(players, random);
+  const total = Math.max(0, Math.min(count, Math.floor(players.length / 4)));
+  const groups = new Map();
+  const others = [];
+  shuffled(players, random).forEach((player) => {
+    if (player.group) groups.set(player.group, [...(groups.get(player.group) || []), player]); else others.push(player);
+  });
+  const together = [];
+  groups.forEach((members, group) => {
+    for (let i = 0; i < members.length; i += 4) {
+      const chunk = members.slice(i, i + 4);
+      if (chunk.length > 1) together.push({ group, chunk }); else others.push(...chunk);
+    }
+  });
+  // Full registered teams first, then the bigger part-teams, as far as the number of teams allows.
+  together.sort((a, b) => b.chunk.length - a.chunk.length);
+  together.slice(total).forEach(({ chunk }) => others.push(...chunk));
+  const kept = together.slice(0, total).map(({ group, chunk }) => ({ ...positionsFor(chunk, random), group }));
+
+  // The other players fill the part-teams' open positions and the new teams.
+  const order = shuffled(others, random);
   const slots = [];
-  for (let t = 0; t < teams; t += 1) TEAM_PLACES.forEach(([field, position]) => slots.push({ field, position }));
+  kept.forEach((team, t) => TEAM_PLACES.forEach(([field, position]) => { if (!team[field]) slots.push({ team: t, field, position }); }));
+  const fresh = total - kept.length;
+  for (let t = 0; t < fresh; t += 1) TEAM_PLACES.forEach(([field, position]) => slots.push({ team: -1, field, position }));
   while (slots.length < order.length) slots.push(null); // Sitting out.
   const cost = order.map((player) => slots.map((slot) => {
     if (!slot) return /^paid$/i.test(player.status) ? 20 : 0;
-    if (player.positions.includes(slot.position)) return 0;
-    return player.positions.length ? 10 : 1;
+    return fitCost(player, slot.position);
   }));
   const column = cheapestAssignment(cost);
   const byField = Object.fromEntries(TEAM_PLACES.map(([field]) => [field, []]));
   const unplaced = [];
   order.forEach((player, i) => {
     const slot = slots[column[i]];
-    if (slot) byField[slot.field].push(player); else unplaced.push(player);
+    if (!slot) unplaced.push(player);
+    else if (slot.team >= 0) kept[slot.team][slot.field] = player;
+    else byField[slot.field].push(player);
   });
   // Sorting each position by draw time (a stable sort keeps the shuffle otherwise) lines up the early players.
   Object.values(byField).forEach((list) => list.sort((a, b) => DRAW_ORDER(a.drawTime) - DRAW_ORDER(b.drawTime)));
-  return {
-    teams: Array.from({ length: teams }, (_, t) => Object.fromEntries(TEAM_PLACES.map(([field]) => [field, byField[field][t]]))),
-    unplaced,
-  };
+  const made = Array.from({ length: fresh }, (_, t) => ({
+    ...Object.fromEntries(TEAM_PLACES.map(([field]) => [field, byField[field][t]])), group: '',
+  }));
+  return { teams: [...kept, ...made], unplaced };
 }
 
 // "Team <skip's last name>", or the skip's full name when two skips share a last name.

@@ -11,7 +11,7 @@ var TABS = {
   Bonspiels: ['id', 'name', 'startDate', 'format', 'settings', 'status', 'archived', 'ccmEvent'],
   Teams: ['id', 'bonspielId', 'name', 'skip', 'third', 'second', 'lead', 'club', 'logo', 'seed', 'pool', 'standing'],
   // Players hold email addresses, so they are only read with the admin PIN and never in the public bonspiel read.
-  Players: ['id', 'bonspielId', 'ccmId', 'name', 'email', 'status', 'drawTime', 'notes', 'positions']
+  Players: ['id', 'bonspielId', 'ccmId', 'name', 'email', 'status', 'drawTime', 'notes', 'positions', 'group']
 };
 var POSITIONS = ['skip', 'vice', 'second', 'lead'];
 var CACHE_KEY = 'live-draw';
@@ -855,7 +855,8 @@ function playersOf(id) {
 function toPlayer(row) {
   return {
     id: String(row.id), ccmId: String(row.ccmId), name: String(row.name), email: String(row.email), status: String(row.status),
-    drawTime: String(row.drawTime), notes: String(row.notes), positions: cleanPositions(String(row.positions).split(','))
+    drawTime: String(row.drawTime), notes: String(row.notes), positions: cleanPositions(String(row.positions).split(',')),
+    group: String(row.group || '')
   };
 }
 
@@ -898,7 +899,7 @@ function fetchPlayers(body) {
 
 function playerFields(reg) {
   return { name: cleanText(reg.name, 80), email: cleanText(reg.email, 120), status: cleanText(reg.status, 40),
-    drawTime: cleanText(reg.drawTime, 40), notes: cleanText(reg.notes, 500) };
+    drawTime: cleanText(reg.drawTime, 40), notes: cleanText(reg.notes, 500), group: cleanText(reg.group, 80) };
 }
 
 // Brings the players in line with the event's registrations: new ones are added, changed ones updated, and
