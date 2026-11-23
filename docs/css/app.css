@@ -523,3 +523,7 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 .status-paid { background: #d8f0dc; color: #1d6b2c; }
 .status-pending { background: #fdf0c8; color: #7a5a00; }
 .status-waiting-list { background: #e3e8f4; color: #34466e; }
+.copied { display: grid; gap: 12px; }
+.copied textarea { width: 100%; font: inherit; font-size: 13px; }
+.reminder { padding: 10px 12px; border-left: 4px solid var(--gold); border-radius: 6px; background: color-mix(in srgb, var(--gold) 16%, var(--card)); }
+.copied footer button { width: 100%; }

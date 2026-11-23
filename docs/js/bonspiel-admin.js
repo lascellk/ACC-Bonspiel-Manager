@@ -276,6 +276,32 @@ function renderPlayers() {
   </section>`;
 }
 
+// Copies every player's email, then says so with the ACC rule that players are only ever sent BCC. If the
+// browser refuses the clipboard, the popup shows the addresses selected, ready to copy by hand.
+async function copyEmails() {
+  const emails = [...new Set(data.players.map((player) => player.email).filter(Boolean))];
+  const text = emails.join('; ');
+  let copied = true;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    copied = false;
+  }
+  const dialog = $('#team-dialog');
+  dialog.innerHTML = `<form method="dialog" class="copied">
+    <header><h2>${copied ? 'Emails copied' : 'Copy the emails'}</h2><button type="button" class="close" aria-label="Close">×</button></header>
+    <p>${copied
+      ? `${emails.length} email ${emails.length === 1 ? 'address has' : 'addresses have'} been copied to the clipboard.`
+      : 'The browser would not copy them. They are selected below: press Ctrl+C (or Cmd+C) to copy them.'}</p>
+    ${copied ? '' : `<textarea readonly rows="5">${esc(text)}</textarea>`}
+    <div class="reminder" role="note"><b>Important:</b> paste the addresses into the <b>BCC</b> field only, never To or CC.
+      ACC policy is that players are only ever BCC'd, so no one sees anyone else's email address.</div>
+    <footer><button type="submit" class="primary">OK</button></footer>
+  </form>`;
+  dialog.showModal();
+  dialog.querySelector('textarea')?.select();
+}
+
 function openPlayer(player) {
   const dialog = $('#team-dialog');
   dialog.innerHTML = `<form id="player-form">
@@ -583,11 +609,7 @@ $('#content').addEventListener('click', (event) => {
     let done = '';
     run(async () => { done = await importPlayers(data.bonspiel.id); }, () => done);
   }
-  if (action === 'copy-emails') {
-    const emails = [...new Set(data.players.map((player) => player.email).filter(Boolean))];
-    navigator.clipboard.writeText(emails.join('; '))
-      .then(() => toast(`${emails.length} emails copied`), () => toast('Could not copy the emails'));
-  }
+  if (action === 'copy-emails') copyEmails();
   if (action === 'add-player') openPlayer({});
   if (editPlayer) openPlayer(data.players.find((player) => player.id === editPlayer));
   if (removePlayer && confirm('Delete this player?')) {
@@ -675,6 +697,10 @@ $('#team-dialog').addEventListener('click', (event) => {
 
 $('#team-dialog').addEventListener('submit', (event) => {
   event.preventDefault();
+  if (event.target.classList.contains('copied')) {
+    $('#team-dialog').close();
+    return;
+  }
   if (event.target.getAttribute('id') === 'player-form') { // Not .id: the form's id input hides it.
     const values = Object.fromEntries(new FormData(event.target));
     const old = data.players.find((player) => player.id === values.id);
