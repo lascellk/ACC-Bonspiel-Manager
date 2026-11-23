@@ -107,6 +107,7 @@ This app has its own Sheet and Apps Script project, separate from the live ACC S
 4. Click **Deploy → New deployment → Web app**, with *Execute as* **Me** and *Who has access* **Anyone**. Copy the `/exec` address.
 
 5. To link the rink draw clock, add `DRAW_CLOCK_URL` (the Draw Clock's `/exec` address) and `DRAW_CLOCK_KEY` (the same text as `SYNC_KEY` in the Draw Clock's Script properties). Then choose `testDrawClock` and click **Run**: it asks once for permission to connect to an external service and logs whether the Draw Clock accepted the key. Leave both properties unset to keep the clock unlinked.
+6. To let the backend log in to the club website's admin site (Curling Club Manager, `almontecurling.ca/administrator`), add `CCM_USER` and `CCM_PASSWORD`, the same login the Payment Tracker uses. Then choose `checkCcmLogin` in `Ccm.gs` and click **Run**: it logs in, logs out and says whether it worked. Nothing in the app uses the login yet.
 
 After changing `Code.gs`, push it, then use **Deploy → Manage deployments → Edit → New version** so the `/exec` address stays the same.
 

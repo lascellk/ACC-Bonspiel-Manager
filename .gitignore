@@ -4,3 +4,6 @@ Reference/
 .claude/settings.local.json
 # Printable signs can contain PINs; the repo is public.
 print/
+
+# Website logins, such as the club admin site (never commit)
+*.login

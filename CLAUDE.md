@@ -37,6 +37,7 @@ Keep this file up to date without being asked. As work goes on, add any decision
 - This app is separate from the live ACC Scoreboard. Never change that app's Sheet, backend, site or Cast app.
 - `print/` (git-ignored, because the scoring sign shows the PIN) holds the 5" x 7" table signs (changed from 5" x 10" on 2026-11-14): `scoring-sign.html` and `public-sign.html`, styled by `sign.css` like the Draw Clock sign. Print them to PDF with headless Chrome (`--print-to-pdf --no-pdf-header-footer`). It only exists on the computer that made it (keith-t430).
 - Draw 3 (id `d94d49ee`, ad-hoc, no bonspiel) is a test draw on the live app for the user and Claude to try changes with. Its scores and results don't matter and can be changed freely.
+- The club admin site login goes only in the `CCM_USER` and `CCM_PASSWORD` script properties. A local copy may sit in a `*.login` file, which `.gitignore` keeps out of the public repo. Never print it, commit it or put it in `docs/`.
 - The PIN storage key is `acc-bonspiel-pin`, because both sites share the `lascellk.github.io` browser storage.
 
 ## Team logos
