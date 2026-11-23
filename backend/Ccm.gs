@@ -128,6 +128,10 @@ function parseXlsxSheet(sheetXml, sharedXml) {
 }
 
 // Rows of the export, with its header row first, as registrations. A missing column is left blank.
+// A group entry (a team registered together) is a group row for the person who registered it, with #Registrants
+// set to the group size and the fee for everyone, then a row for each player, the registrant usually among them.
+// The group row is left out when its players have rows, so no one is listed twice. Each player keeps the group's
+// name, which is the registrant's.
 function registrantsFromRows(rows) {
   if (!rows.length) return [];
   var head = rows[0].map(function (h) { return String(h).trim(); });
@@ -138,7 +142,15 @@ function registrantsFromRows(rows) {
     var i = head.indexOf(name);
     return i < 0 || row[i] === undefined ? '' : String(row[i]).trim();
   };
-  return rows.slice(1).filter(function (row) { return get(row, 'ID'); }).map(function (row) {
+  var size = function (row) { return Number(get(row, '#Registrants')) || 1; };
+  var data = rows.slice(1).filter(function (row) { return get(row, 'ID'); });
+  var hasPlayers = {};
+  data.forEach(function (row) {
+    if (size(row) === 1 && get(row, 'Group:')) hasPlayers[get(row, 'Event ID') + '|' + get(row, 'Group:')] = true;
+  });
+  return data.filter(function (row) {
+    return size(row) === 1 || !hasPlayers[get(row, 'Event ID') + '|' + get(row, 'Group:')];
+  }).map(function (row) {
     var date = get(row, 'Event Date').match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
     var preferred = CCM_POSITIONS[get(row, 'Preferred Position').toLowerCase()];
     return {
@@ -146,7 +158,7 @@ function registrantsFromRows(rows) {
       eventDate: date ? date[3] + '-' + ('0' + date[1]).slice(-2) + '-' + ('0' + date[2]).slice(-2) : '',
       name: (get(row, 'First Name') + ' ' + get(row, 'Last Name')).replace(/\s+/g, ' ').trim(),
       email: get(row, 'Email'), status: get(row, 'Payment Status'), drawTime: get(row, 'Draw Time'),
-      notes: get(row, 'Notes to the Club'), positions: preferred ? [preferred] : []
+      notes: get(row, 'Notes to the Club'), positions: preferred ? [preferred] : [], group: get(row, 'Group:')
     };
   });
 }

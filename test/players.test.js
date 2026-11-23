@@ -32,7 +32,7 @@ test('the export is read into players, with dates, names and preferred positions
   const regs = api.context.registrantsFromRows([HEAD, row('1', '190', 'Ann', 'Paid', { 'Preferred Position': 'Mate', 'Draw Time': 'Late Draw' })]);
   assert.deepEqual(JSON.parse(JSON.stringify(regs[0])), {
     id: '1', eventId: '190', event: '2026-27 Turkey Spiel', eventDate: '2026-11-21', name: 'Ann Player',
-    email: 'ann@example.com', status: 'Paid', drawTime: 'Late Draw', notes: '', positions: ['vice'],
+    email: 'ann@example.com', status: 'Paid', drawTime: 'Late Draw', notes: '', positions: ['vice'], group: '',
   });
   assert.throws(() => api.context.registrantsFromRows([['ID', 'Event'], ['1', 'x']]), /no Event ID column/);
 });
@@ -125,4 +125,20 @@ test('several teams are added in one go, within the team limit', () => {
   assert.deepEqual(teams.map((team) => [team.name, team.skip, team.lead, team.seed]), [['Team Archer', 'Ann Archer', 'Di Dunn', 1], ['Ed Ellis', 'Ed Ellis', '', 0]]);
   const many = Array.from({ length: 15 }, (_, i) => ({ name: `T${i}` }));
   assert.match(admin(api, { action: 'addTeams', bonspielId: id, teams: many }).error, /up to 16/);
+});
+
+test('a group entry lists its players once, without the group row of the person who registered it', () => {
+  const api = loadBackend();
+  const head = [...HEAD, 'Group: ', '#Registrants'];
+  const line = (id, first, group, size) => [...row(id, '194', first), group, String(size)];
+  const regs = api.context.registrantsFromRows([head,
+    line('10', 'Gord', 'Gord A', 4), line('11', 'Gord', 'Gord A', 1), line('12', 'Lyn', 'Gord A', 1),
+    line('13', 'Max', 'Gord A', 1), line('14', 'Al', 'Gord A', 1),
+    line('20', 'Solo', '', 1),
+    // A group row whose players have no rows of their own is kept, so the registrant isn't lost.
+    line('30', 'Pat', 'Pat C', 3),
+  ]);
+  assert.deepEqual([...regs.map((reg) => reg.id)], ['11', '12', '13', '14', '20', '30']);
+  assert.equal(regs[1].group, 'Gord A');
+  assert.equal(regs[4].group, '');
 });
