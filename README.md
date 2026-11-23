@@ -38,7 +38,7 @@ The five steps on `bonspiel.html`:
    - **Update from CCM** gets the registrations again: new ones are added, changed names, emails and statuses are updated, and cancelled ones are taken off. Ticked positions stay. Players on the waiting list are listed last. A preferred position given on the registration form is ticked when the player is first added.
    - A CCM player's name and email come from CCM, so change them there. **Add player** adds someone by hand, who can be edited or deleted here.
    - Players and their emails are only shown with the admin PIN. They're never on the public page.
-3. **Teams:** add up to 16 teams with their rosters, seeds and logos. **Assign pools** deals the seeded teams out evenly, and you can change any pool by hand.
+3. **Teams:** add up to 16 teams with their rosters, seeds and logos. When the bonspiel has players, the **Skip**, **Third**, **Second** and **Lead** boxes offer them in a list: those who prefer that position come first (Third is the vice), and anyone already on another team is left out. Any other name can still be typed. The step also counts how many players are on a team. **Assign pools** deals the seeded teams out evenly, and you can change any pool by hand.
 4. **Schedule:** enter the first draw time, then generate. The preview isn't saved until you say so. Tap two games to swap them, and the page says if a swap puts a team on two sheets or a game ahead of a result it needs.
 5. **Run:** press **Make live** for the current draw and score it as usual. **Take off live** clears the scoring page and TV without losing any scores or the timer. In a fixed-games event, press **Fill round** after each round. When the pools end, check the seeds and press **Fill the playoff games**.
 

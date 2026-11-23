@@ -45,7 +45,7 @@ async function load() {
   }
   const result = await get('bonspiel', { id });
   data = { bonspiel: result.bonspiel, teams: result.teams, draws: result.draws, linkedDraws: result.linkedDraws, players: [] };
-  if (step === 1) data.players = (await post('players', { id })).players;
+  if (step === 1 || step === 2) data.players = (await post('players', { id })).players;
   liveId = result.draw?.id || '';
   $('#page-title').textContent = data.bonspiel.name;
   $('#event-link').href = `event.html?id=${id}`;
@@ -333,12 +333,35 @@ async function savePositions(row) {
 
 // ----- 3. Teams
 
+// The team fields that hold players, with the position each one is picked for. Third is the vice.
+const TEAM_SPOTS = [['skip', 'Skip', 'skip'], ['third', 'Third', 'vice'], ['second', 'Second', 'second'], ['lead', 'Lead', 'lead']];
+const nameKey = (name) => String(name || '').trim().toLowerCase();
+
+// The names of players already on a team, other than the team being edited.
+function playersOnTeams(exceptId = '') {
+  return new Set(data.teams.filter((team) => team.id !== exceptId)
+    .flatMap((team) => TEAM_SPOTS.map(([field]) => nameKey(team[field]))).filter(Boolean));
+}
+
+// A list of the players free for one spot: those who prefer it first, then the rest, each by name.
+function playerChoices(position, taken) {
+  const label = (player) => [
+    player.positions.length ? `Prefers ${player.positions.map((key) => POSITIONS.find(([k]) => k === key)[1]).join(', ')}` : 'No preference',
+    /waiting/i.test(player.status) ? 'waiting list' : '',
+  ].filter(Boolean).join(' · ');
+  return data.players.filter((player) => !taken.has(nameKey(player.name)))
+    .sort((a, b) => Number(!a.positions.includes(position)) - Number(!b.positions.includes(position))
+      || Number(/waiting/i.test(a.status)) - Number(/waiting/i.test(b.status)) || a.name.localeCompare(b.name))
+    .map((player) => `<option value="${esc(player.name)}" label="${esc(label(player))}"></option>`).join('');
+}
+
 function renderTeams() {
-  const { teams, bonspiel } = data;
+  const { teams, bonspiel, players } = data;
   const usesPools = bonspiel.format === 'pools';
+  const placed = players.filter((player) => playersOnTeams().has(nameKey(player.name))).length;
   $('#content').innerHTML = `<section class="panel">
     <div class="panel-head">
-      <div><h2>Teams</h2><p>${teams.length} of ${MAX_TEAMS}</p></div>
+      <div><h2>Teams</h2><p>${teams.length} of ${MAX_TEAMS}${players.length ? ` · ${placed} of ${players.length} players on a team` : ''}</p></div>
       <div class="button-row">
         ${usesPools ? '<button type="button" data-action="assign-pools">Assign pools</button>' : ''}
         <button type="button" class="primary" data-action="add-team" ${teams.length >= MAX_TEAMS ? 'disabled' : ''}>Add team</button>
@@ -358,13 +381,19 @@ function openTeam(team) {
   const dialog = $('#team-dialog');
   const field = (name, label, attrs = 'maxlength="40"') =>
     `<label>${label} <input name="${name}" value="${esc(team[name] ?? '')}" ${attrs} autocomplete="off"></label>`;
+  const taken = playersOnTeams(team.id);
+  // With players, each spot offers them in a list, and any other name can still be typed.
+  const spot = ([name, label, position]) => (data.players.length
+    ? `<label>${label} <input name="${name}" value="${esc(team[name] ?? '')}" maxlength="40" autocomplete="off" list="players-${name}" placeholder="Choose or type a name">
+      <datalist id="players-${name}">${playerChoices(position, taken)}</datalist></label>`
+    : field(name, label));
   dialog.innerHTML = `<form id="team-form">
     <header><h2>${team.id ? 'Edit team' : 'Add team'}</h2><button type="button" class="close" aria-label="Close">×</button></header>
     <input type="hidden" name="id" value="${esc(team.id || '')}">
     <div class="draw-fields two">
       ${field('name', 'Team name', 'maxlength="40" required')}
       ${field('club', 'Club', 'maxlength="60"')}
-      ${field('skip', 'Skip')}${field('third', 'Third')}${field('second', 'Second')}${field('lead', 'Lead')}
+      ${TEAM_SPOTS.map(spot).join('')}
       <label>Seed <input type="number" name="seed" min="1" max="${MAX_TEAMS}" value="${team.seed || ''}"></label>
       <label>Pool <input name="pool" value="${esc(team.pool || '')}" maxlength="2"></label>
       <label>Logo <select name="logo">${logoOptions(logos, team.logo || '')}</select></label>
