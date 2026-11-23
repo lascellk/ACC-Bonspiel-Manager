@@ -60,13 +60,13 @@ export function loadBackend(properties = { ADMIN_PIN: '1234', SCORE_PIN: '0000' 
     },
   });
   const fetches = [];
-  const source = readFileSync(new URL('../backend/Code.gs', import.meta.url), 'utf8');
-  vm.runInContext(source, context);
+  for (const file of ['Code.gs', 'Ccm.gs']) vm.runInContext(readFileSync(new URL(`../backend/${file}`, import.meta.url), 'utf8'), context);
   context.setup();
   const api = {
     tabs,
     fetches,
     fetchReply: () => '{"ok":true}',
+    context,
     get: (parameter = {}) => JSON.parse(context.doGet({ parameter })),
     post: (body) => JSON.parse(context.doPost({ postData: { contents: JSON.stringify(body) } })),
   };

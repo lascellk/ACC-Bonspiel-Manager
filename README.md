@@ -30,12 +30,17 @@ If a tied game needs an extra end, keep scoring: the line score grows by itself.
 
 ## Running a bonspiel
 
-The four steps on `bonspiel.html`:
+The five steps on `bonspiel.html`:
 
 1. **Details:** name, date, format and settings, including the game type. The game types match the rink Draw Clock: **8-End Draw** (95 min), **6-End Draw** (65 min), **Mixed Doubles** (8 ends, 90 min), or **Custom** for any ends and minutes. The draw editor on `admin.html` has the same choice. The formats are pools then playoffs, fixed games ranked on points, and single or double knockout.
-2. **Teams:** add up to 16 teams with their rosters, seeds and logos. **Assign pools** deals the seeded teams out evenly, and you can change any pool by hand.
-3. **Schedule:** enter the first draw time, then generate. The preview isn't saved until you say so. Tap two games to swap them, and the page says if a swap puts a team on two sheets or a game ahead of a result it needs.
-4. **Run:** press **Make live** for the current draw and score it as usual. **Take off live** clears the scoring page and TV without losing any scores or the timer. In a fixed-games event, press **Fill round** after each round. When the pools end, check the seeds and press **Fill the playoff games**.
+2. **Players:** everyone playing, with their email, registration status and notes, and **Skip**, **Vice**, **Second** and **Lead** boxes for the positions they prefer. A ticked box saves straight away. **Copy emails** copies every address, ready to paste into an email.
+   - **Details** chooses where the players come from: **Added by hand**, or **From a CCM event's registrations**. Choosing a CCM event lists the club website's Events Booking events (this takes a few seconds), fills in the name and date of a new bonspiel, and gets its players when saved.
+   - **Update from CCM** gets the registrations again: new ones are added, changed names, emails and statuses are updated, and cancelled ones are taken off. Ticked positions stay. Players on the waiting list are listed last. A preferred position given on the registration form is ticked when the player is first added.
+   - A CCM player's name and email come from CCM, so change them there. **Add player** adds someone by hand, who can be edited or deleted here.
+   - Players and their emails are only shown with the admin PIN. They're never on the public page.
+3. **Teams:** add up to 16 teams with their rosters, seeds and logos. **Assign pools** deals the seeded teams out evenly, and you can change any pool by hand.
+4. **Schedule:** enter the first draw time, then generate. The preview isn't saved until you say so. Tap two games to swap them, and the page says if a swap puts a team on two sheets or a game ahead of a result it needs.
+5. **Run:** press **Make live** for the current draw and score it as usual. **Take off live** clears the scoring page and TV without losing any scores or the timer. In a fixed-games event, press **Fill round** after each round. When the pools end, check the seeds and press **Fill the playoff games**.
 
 Rules to know:
 
@@ -102,12 +107,12 @@ This app has its own Sheet and Apps Script project, separate from the live ACC S
    ```
    clasp --user clubmgr push --force
    ```
-2. Open the Apps Script project, choose the `setup` function and click **Run**. Approve the permissions. This creates the `Draws`, `Games`, `Logos`, `Bonspiels` and `Teams` tabs. Run it again after a change that adds columns.
+2. Open the Apps Script project, choose the `setup` function and click **Run**. Approve the permissions. This creates the `Draws`, `Games`, `Logos`, `Bonspiels`, `Teams` and `Players` tabs. Run it again after a change that adds columns.
 3. Under **Project Settings → Script properties**, add `ADMIN_PIN` and `SCORE_PIN`. The app refuses every change until they are set.
 4. Click **Deploy → New deployment → Web app**, with *Execute as* **Me** and *Who has access* **Anyone**. Copy the `/exec` address.
 
 5. To link the rink draw clock, add `DRAW_CLOCK_URL` (the Draw Clock's `/exec` address) and `DRAW_CLOCK_KEY` (the same text as `SYNC_KEY` in the Draw Clock's Script properties). Then choose `testDrawClock` and click **Run**: it asks once for permission to connect to an external service and logs whether the Draw Clock accepted the key. Leave both properties unset to keep the clock unlinked.
-6. To let the backend log in to the club website's admin site (Curling Club Manager, `almontecurling.ca/administrator`), add `CCM_USER` and `CCM_PASSWORD`, the same login the Payment Tracker uses. Then choose `checkCcmLogin` in `Ccm.gs` and click **Run**: it logs in, logs out and says whether it worked. Nothing in the app uses the login yet.
+6. To let the backend log in to the club website's admin site (Curling Club Manager, `almontecurling.ca/administrator`), add `CCM_USER` and `CCM_PASSWORD`, the same login the Payment Tracker uses. Then choose `checkCcmLogin` in `Ccm.gs` and click **Run**: it logs in, logs out and says whether it worked. The Players step uses it to read Events Booking's registrant export. It only reads the site.
 
 After changing `Code.gs`, push it, then use **Deploy → Manage deployments → Edit → New version** so the `/exec` address stays the same.
 

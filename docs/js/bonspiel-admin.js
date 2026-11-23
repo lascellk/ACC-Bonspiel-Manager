@@ -8,7 +8,8 @@ import { bracketHtml, linkedSchedule, scheduleHtml, standingsHtml } from './bons
 import { applyGameType, esc, gameTypeFields, loadLogos, logoHtml, logoOptions, notConfiguredNotice, requirePin, STOP_LIVE_WARNING, toast } from './view.js';
 
 const $ = (selector) => document.querySelector(selector);
-const STEPS = ['Details', 'Teams', 'Schedule', 'Run'];
+const STEPS = ['Details', 'Players', 'Teams', 'Schedule', 'Run'];
+const POSITIONS = [['skip', 'Skip'], ['vice', 'Vice'], ['second', 'Second'], ['lead', 'Lead']];
 let logos = [];
 let list = [];
 let data = null; // {bonspiel, teams, draws, linkedDraws} for the open bonspiel.
@@ -18,6 +19,7 @@ let preview = null; // Generated draws, not yet saved.
 let picked = null; // The {draw, sheet} chosen first for a swap.
 let timing = { first: '', gap: 180, perDay: 4 };
 let editingStandings = false;
+let ccmEventList = null; // The CCM events, once loaded from the admin site.
 const ARCHIVE_WARNING = 'Archive this bonspiel? Its teams, draws and results are kept, but it leaves the public page and the admin choices, '
   + 'and the TV goes back to the scoreboard if it shows it. You can unarchive it any time.';
 
@@ -42,7 +44,8 @@ async function load() {
     return;
   }
   const result = await get('bonspiel', { id });
-  data = { bonspiel: result.bonspiel, teams: result.teams, draws: result.draws, linkedDraws: result.linkedDraws };
+  data = { bonspiel: result.bonspiel, teams: result.teams, draws: result.draws, linkedDraws: result.linkedDraws, players: [] };
+  if (step === 1) data.players = (await post('players', { id })).players;
   liveId = result.draw?.id || '';
   $('#page-title').textContent = data.bonspiel.name;
   $('#event-link').href = `event.html?id=${id}`;
@@ -54,7 +57,7 @@ async function load() {
 async function run(work, done) {
   try {
     await work();
-    if (done) toast(done);
+    if (done) toast(typeof done === 'function' ? done() : done);
     await load();
   } catch (error) {
     toast(error.message);
@@ -87,7 +90,7 @@ function renderSteps() {
 
 function render() {
   renderSteps();
-  [renderDetails, renderTeams, renderSchedule, renderRun][step]();
+  [renderDetails, renderPlayers, renderTeams, renderSchedule, renderRun][step]();
 }
 
 // ----- 1. Details
@@ -108,6 +111,12 @@ function renderDetails() {
     ${item.archived ? '<p class="note grow">This bonspiel is archived. Its results are kept, but it is not on the public page, the TV choices or Teams from.</p>' : ''}
     <label class="grow">Name <input name="name" value="${esc(item.name)}" maxlength="60" required></label>
     <label>Start date <input type="date" name="startDate" value="${esc(item.startDate)}"></label>
+    <fieldset class="choices grow"><legend>Players</legend>
+      <label><input type="radio" name="source" value="manual" ${item.ccmEvent ? '' : 'checked'}> Added by hand</label>
+      <label><input type="radio" name="source" value="ccm" ${item.ccmEvent ? 'checked' : ''}> From a CCM event's registrations</label>
+      <select name="ccmEvent" class="grow" ${item.ccmEvent ? '' : 'hidden'}>${ccmEventOptions(item.ccmEvent)}</select>
+      <span id="ccm-status" class="note"></span>
+    </fieldset>
     <label>Format <select name="format">${Object.entries(FORMATS).map(([value, label]) =>
       `<option value="${value}" ${value === item.format ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
     ${number('poolCount', 'Pools', s.poolCount, 1, 4, 'pools')}
@@ -156,9 +165,58 @@ async function saveStandingsView(view) {
   }
 }
 
+// ----- CCM events
+
+function ccmEventOptions(current) {
+  const list = [...(ccmEventList || [])];
+  if (current && !list.some((event) => event.id === current.id)) list.unshift(current);
+  const label = (event) => `${event.date} · ${event.name}${event.players === undefined ? '' : ` (${event.players} players)`}`;
+  return `<option value="">${ccmEventList ? 'Choose an event' : 'Loading CCM events…'}</option>${list.map((event) =>
+    `<option value="${esc(event.id)}" data-name="${esc(event.name)}" data-date="${esc(event.date)}" ${event.id === current?.id ? 'selected' : ''}>${esc(label(event))}</option>`).join('')}`;
+}
+
+// The list comes from the club admin site, which takes several seconds, so it is loaded once and only when wanted.
+async function loadCcmEvents() {
+  if (ccmEventList) return;
+  const status = $('#ccm-status');
+  if (status) status.textContent = 'Loading events from the club website…';
+  try {
+    ccmEventList = (await post('ccmEvents')).events;
+    if (status) status.textContent = '';
+  } catch (error) {
+    if (status) status.textContent = `Could not load the CCM events: ${error.message}`;
+    return;
+  }
+  const select = $('#details [name=ccmEvent]');
+  if (!select) return;
+  const chosen = select.selectedOptions[0];
+  select.innerHTML = ccmEventOptions(chosen?.value ? { id: chosen.value, name: chosen.dataset.name, date: chosen.dataset.date } : null);
+}
+
+function chosenCcmEvent(form) {
+  if (form.elements.source.value !== 'ccm') return null;
+  const option = form.elements.ccmEvent.selectedOptions[0];
+  if (!option?.value) throw new Error('Choose a CCM event, or Added by hand');
+  return { id: option.value, name: option.dataset.name, date: option.dataset.date };
+}
+
+async function importPlayers(id) {
+  const result = await post('importPlayers', { id });
+  const changes = [[result.added, 'added'], [result.updated, 'updated'], [result.removed, 'removed']]
+    .filter(([count]) => count).map(([count, word]) => `${count} ${word}`);
+  return changes.length ? `Players from CCM: ${changes.join(', ')}` : 'Players already match CCM';
+}
+
 function saveDetails(form) {
+  let ccmEvent;
+  try {
+    ccmEvent = chosenCcmEvent(form);
+  } catch (error) {
+    toast(error.message);
+    return;
+  }
   const values = Object.fromEntries(new FormData(form));
-  const { name, startDate, format, trackEnds, scorePoints, gameType, standingsView, ...numbers } = values;
+  const { name, startDate, format, trackEnds, scorePoints, gameType, standingsView, source, ccmEvent: chosenId, ...numbers } = values;
   const settings = {
     ...DEFAULT_SETTINGS,
     ...Object.fromEntries(Object.entries(numbers).map(([key, value]) => [key, Number(value)])),
@@ -167,16 +225,87 @@ function saveDetails(form) {
     standingsView: standingsView || 'pools',
   };
   const id = data?.bonspiel.id || '';
+  const linkChanged = (ccmEvent?.id || '') !== (data?.bonspiel.ccmEvent?.id || '');
+  let done = 'Saved';
   run(async () => {
-    const result = await post('saveBonspiel', { bonspiel: { id, name, startDate, format, settings } });
+    const result = await post('saveBonspiel', { bonspiel: { id, name, startDate, format, settings, ccmEvent } });
     if (!id) {
       setOpen(result.id);
       step = 1;
     }
-  }, 'Saved');
+    if (ccmEvent && linkChanged) {
+      toast('Saved. Getting the players from CCM…');
+      // The bonspiel is saved either way, so a failed import is reported without stopping the page reloading it.
+      done = await importPlayers(result.id).catch((error) => `Saved, but the players did not load: ${error.message}. Try Update from CCM.`);
+    }
+  }, () => done);
 }
 
-// ----- 2. Teams
+// ----- 2. Players
+
+const playerOrder = (a, b) => Number(/waiting/i.test(a.status)) - Number(/waiting/i.test(b.status)) || a.name.localeCompare(b.name);
+
+function renderPlayers() {
+  const { players, bonspiel } = data;
+  const event = bonspiel.ccmEvent;
+  const counts = POSITIONS.map(([key, label]) => `${label} ${players.filter((player) => player.positions.includes(key)).length}`).join(' · ');
+  const waiting = players.filter((player) => /waiting/i.test(player.status)).length;
+  $('#content').innerHTML = `<section class="panel">
+    <div class="panel-head">
+      <div><h2>Players</h2><p>${players.length} ${players.length === 1 ? 'player' : 'players'}${waiting ? ` (${waiting} on the waiting list)` : ''}${event ? ` · from ${esc(event.name)}` : ''}</p>
+        <p>Preferred: ${counts}</p></div>
+      <div class="button-row">
+        ${event ? '<button type="button" data-action="import-players">Update from CCM</button>' : ''}
+        <button type="button" data-action="copy-emails" ${players.some((player) => player.email) ? '' : 'disabled'}>Copy emails</button>
+        <button type="button" class="primary" data-action="add-player">Add player</button>
+      </div>
+    </div>
+    ${players.length ? `<div class="table-scroll"><table class="standings players">
+      <thead><tr><th class="left">Name</th><th class="left">Email</th><th class="left">Status</th>
+        ${POSITIONS.map(([, label]) => `<th>${label}</th>`).join('')}<th class="left">Notes</th><th></th></tr></thead>
+      <tbody>${[...players].sort(playerOrder).map((player) => `<tr data-player="${esc(player.id)}">
+        <td class="left"><b>${esc(player.name)}</b>${player.drawTime ? `<small>${esc(player.drawTime)}</small>` : ''}</td>
+        <td class="left">${player.email ? `<a href="mailto:${esc(player.email)}">${esc(player.email)}</a>` : ''}</td>
+        <td class="left">${player.ccmId ? `<span class="status status-${esc(player.status.toLowerCase().replace(/\W+/g, '-'))}">${esc(player.status)}</span>` : '<span class="status">By hand</span>'}</td>
+        ${POSITIONS.map(([key, label]) => `<td><input type="checkbox" data-position="${key}" aria-label="${label}" ${player.positions.includes(key) ? 'checked' : ''}></td>`).join('')}
+        <td class="left notes">${esc(player.notes)}</td>
+        <td class="actions">${player.ccmId ? '' : `<button type="button" data-edit-player="${esc(player.id)}">Edit</button>
+          <button type="button" class="danger" data-remove-player="${esc(player.id)}">Delete</button>`}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : `<p class="empty">${event ? 'No players yet. Press Update from CCM to get the registrations.' : 'No players yet.'}</p>`}
+  </section>`;
+}
+
+function openPlayer(player) {
+  const dialog = $('#team-dialog');
+  dialog.innerHTML = `<form id="player-form">
+    <header><h2>${player.id ? 'Edit player' : 'Add player'}</h2><button type="button" class="close" aria-label="Close">×</button></header>
+    <input type="hidden" name="id" value="${esc(player.id || '')}">
+    <div class="draw-fields two">
+      <label>Name <input name="name" value="${esc(player.name || '')}" maxlength="80" required autocomplete="off"></label>
+      <label>Email <input type="email" name="email" value="${esc(player.email || '')}" maxlength="120" autocomplete="off"></label>
+      <label class="grow">Notes <input name="notes" value="${esc(player.notes || '')}" maxlength="500" autocomplete="off"></label>
+    </div>
+    <footer><button type="submit" class="primary">Save player</button></footer>
+  </form>`;
+  dialog.showModal();
+}
+
+// A ticked box saves straight away, without reloading the page.
+async function savePositions(row) {
+  const player = data.players.find((item) => item.id === row.dataset.player);
+  const positions = [...row.querySelectorAll('[data-position]:checked')].map((box) => box.dataset.position);
+  try {
+    await post('savePlayer', { player: { ...player, bonspielId: data.bonspiel.id, positions } });
+    player.positions = positions;
+    renderPlayers();
+  } catch (error) {
+    toast(error.message);
+    renderPlayers();
+  }
+}
+
+// ----- 3. Teams
 
 function renderTeams() {
   const { teams, bonspiel } = data;
@@ -219,7 +348,7 @@ function openTeam(team) {
   dialog.showModal();
 }
 
-// ----- 3. Schedule
+// ----- 4. Schedule
 
 function generate() {
   try {
@@ -412,6 +541,18 @@ $('#steps').addEventListener('click', (event) => {
 });
 
 $('#content').addEventListener('change', (event) => {
+  if (event.target.dataset.position) savePositions(event.target.closest('tr'));
+  if (event.target.name === 'source') {
+    event.target.form.elements.ccmEvent.hidden = event.target.value !== 'ccm';
+    if (event.target.value === 'ccm') loadCcmEvents();
+  }
+  if (event.target.name === 'ccmEvent' && !data?.bonspiel.id) {
+    const option = event.target.selectedOptions[0];
+    if (option?.value) {
+      event.target.form.elements.name.value = option.dataset.name;
+      if (option.dataset.date) event.target.form.elements.startDate.value = option.dataset.date;
+    }
+  }
   if (['format', 'trackEnds', 'scorePoints'].includes(event.target.name)) showFormatFields();
   if (event.target.name === 'gameType') applyGameType(event.target.form);
   if (event.target.name === 'standingsView') saveStandingsView(event.target.value);
@@ -436,7 +577,22 @@ $('#content').addEventListener('submit', (event) => {
 $('#content').addEventListener('click', (event) => {
   const button = event.target.closest('button');
   if (!button) return;
-  const { action, open, team, removeTeam, slot, live, stopLive } = button.dataset;
+  const { action, open, team, removeTeam, slot, live, stopLive, editPlayer, removePlayer } = button.dataset;
+  if (action === 'import-players') {
+    toast('Getting the players from CCM…');
+    let done = '';
+    run(async () => { done = await importPlayers(data.bonspiel.id); }, () => done);
+  }
+  if (action === 'copy-emails') {
+    const emails = [...new Set(data.players.map((player) => player.email).filter(Boolean))];
+    navigator.clipboard.writeText(emails.join('; '))
+      .then(() => toast(`${emails.length} emails copied`), () => toast('Could not copy the emails'));
+  }
+  if (action === 'add-player') openPlayer({});
+  if (editPlayer) openPlayer(data.players.find((player) => player.id === editPlayer));
+  if (removePlayer && confirm('Delete this player?')) {
+    run(() => post('deletePlayer', { id: removePlayer }), 'Player deleted');
+  }
   if (open) {
     setOpen(open);
     step = 0;
@@ -519,6 +675,14 @@ $('#team-dialog').addEventListener('click', (event) => {
 
 $('#team-dialog').addEventListener('submit', (event) => {
   event.preventDefault();
+  if (event.target.getAttribute('id') === 'player-form') { // Not .id: the form's id input hides it.
+    const values = Object.fromEntries(new FormData(event.target));
+    const old = data.players.find((player) => player.id === values.id);
+    const player = { ...values, bonspielId: data.bonspiel.id, positions: old?.positions || [] };
+    $('#team-dialog').close();
+    run(() => post('savePlayer', { player }), 'Player saved');
+    return;
+  }
   const team = { ...Object.fromEntries(new FormData(event.target)), bonspielId: data.bonspiel.id };
   $('#team-dialog').close();
   run(() => post('saveTeam', { team }), 'Team saved');

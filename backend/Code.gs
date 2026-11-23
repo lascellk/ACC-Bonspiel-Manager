@@ -8,9 +8,12 @@ var TABS = {
   Games: ['drawId', 'sheet', 'team1', 'logo1', 'team2', 'logo2', 'stone1', 'hammer', 'ends', 'final',
     'gameId', 'team1Id', 'team2Id', 'phase', 'bracket', 'source1', 'source2'],
   Logos: ['id', 'name', 'data', 'archived'],
-  Bonspiels: ['id', 'name', 'startDate', 'format', 'settings', 'status', 'archived'],
-  Teams: ['id', 'bonspielId', 'name', 'skip', 'third', 'second', 'lead', 'club', 'logo', 'seed', 'pool', 'standing']
+  Bonspiels: ['id', 'name', 'startDate', 'format', 'settings', 'status', 'archived', 'ccmEvent'],
+  Teams: ['id', 'bonspielId', 'name', 'skip', 'third', 'second', 'lead', 'club', 'logo', 'seed', 'pool', 'standing'],
+  // Players hold email addresses, so they are only read with the admin PIN and never in the public bonspiel read.
+  Players: ['id', 'bonspielId', 'ccmId', 'name', 'email', 'status', 'drawTime', 'notes', 'positions']
 };
+var POSITIONS = ['skip', 'vice', 'second', 'lead'];
 var CACHE_KEY = 'live-draw';
 var CACHE_VERSION = 'bonspiel-version';
 var BONSPIEL_CACHE_SECONDS = 30;
@@ -24,6 +27,13 @@ var SPIN_MAX_MS = 30 * 60000; // The wheels leave the TV by themselves if the ad
 
 var ACTIONS = {
   login: { role: 'score', fn: function () { return {}; }, noLock: true },
+  // These log in to the club admin site, which takes several seconds, so they run without the lock that score
+  // entry waits on. importPlayers downloads first (fetch), then writes under the lock.
+  ccmEvents: { role: 'admin', fn: ccmEvents, noLock: true },
+  players: { role: 'admin', fn: listPlayers, noLock: true },
+  importPlayers: { role: 'admin', fn: importPlayers, fetch: fetchPlayers },
+  savePlayer: { role: 'admin', fn: savePlayer },
+  deletePlayer: { role: 'admin', fn: deletePlayer },
   timer: { role: 'score', fn: timerAction },
   setEnd: { role: 'score', fn: setEnd },
   swapHammer: { role: 'score', fn: swapHammer },
@@ -83,11 +93,16 @@ function doPost(e) {
     var action = ACTIONS[body.action];
     if (!action) throw new Error('Unknown action');
     var role = checkPin(body.pin, action.role);
-    if (action.noLock) return { role: role };
+    if (action.noLock) {
+      var read = action.fn(body) || {};
+      read.role = role;
+      return read;
+    }
+    var fetched = action.fetch ? action.fetch(body) : null;
     var lock = LockService.getScriptLock();
     lock.waitLock(15000);
     try {
-      var result = action.fn(body) || {};
+      var result = action.fn(body, fetched) || {};
       cacheLive(buildLive());
       expireBonspiels();
       return result;
@@ -640,7 +655,8 @@ function clearLaterSlots(row) {
 function toBonspiel(row) {
   return {
     id: String(row.id), name: String(row.name), startDate: String(row.startDate), format: String(row.format),
-    status: String(row.status), settings: JSON.parse(row.settings || '{}'), archived: String(row.archived) === 'true'
+    status: String(row.status), settings: JSON.parse(row.settings || '{}'), archived: String(row.archived) === 'true',
+    ccmEvent: row.ccmEvent ? JSON.parse(row.ccmEvent) : null
   };
 }
 
@@ -743,6 +759,8 @@ function saveBonspiel(body) {
   item.startDate = cleanText(input.startDate, 10);
   item.format = input.format;
   item.settings = JSON.stringify(cleanSettings(input.settings));
+  // Left out, the CCM event stays as it is. Null or blank unlinks it.
+  if (input.ccmEvent !== undefined) item.ccmEvent = cleanCcmEvent(input.ccmEvent);
   if (row) writeRow('Bonspiels', row._row, item); else appendRow('Bonspiels', item);
   return { id: item.id };
 }
@@ -759,6 +777,7 @@ function deleteBonspiel(body) {
   if (tvBonspiel() === String(body.id)) setTvView({});
   removeDraws(drawsOf(body.id));
   deleteRows('Teams', teamsOf(body.id));
+  deleteRows('Players', playersOf(body.id));
   deleteRows('Bonspiels', [findBonspiel(row.id)]);
 }
 
@@ -768,6 +787,117 @@ function archiveBonspiel(body) {
   row.archived = body.archived ? 'true' : '';
   writeRow('Bonspiels', row._row, row);
   if (body.archived && tvBonspiel() === String(row.id)) setTvView({});
+}
+
+// ----- Players, from a CCM event's registrations or added by hand
+
+function cleanCcmEvent(event) {
+  if (!event || !cleanText(event.id, 20)) return '';
+  return JSON.stringify({ id: cleanText(event.id, 20), name: cleanText(event.name, 100), date: cleanText(event.date, 10) });
+}
+
+function cleanPositions(list) {
+  return POSITIONS.filter(function (position) { return (list || []).indexOf(position) >= 0; });
+}
+
+function playersOf(id) {
+  return readTab('Players').filter(function (player) { return String(player.bonspielId) === String(id); });
+}
+
+function toPlayer(row) {
+  return {
+    id: String(row.id), ccmId: String(row.ccmId), name: String(row.name), email: String(row.email), status: String(row.status),
+    drawTime: String(row.drawTime), notes: String(row.notes), positions: cleanPositions(String(row.positions).split(','))
+  };
+}
+
+// The events in the registrant export, newest first, for linking a bonspiel. players leaves out cancellations.
+function ccmEvents() {
+  var events = {};
+  ccmRegistrants().forEach(function (reg) {
+    if (!reg.eventId) return;
+    var event = events[reg.eventId] || (events[reg.eventId] = { id: reg.eventId, name: reg.event, date: reg.eventDate, players: 0 });
+    if (!/cancel/i.test(reg.status)) event.players += 1;
+  });
+  return {
+    events: Object.keys(events).map(function (id) { return events[id]; })
+      .sort(function (a, b) { return b.date.localeCompare(a.date) || Number(b.id) - Number(a.id); })
+  };
+}
+
+function listPlayers(body) {
+  findBonspiel(body.id);
+  return { players: playersOf(body.id).map(toPlayer) };
+}
+
+function fetchPlayers(body) {
+  var bonspiel = toBonspiel(findBonspiel(body.id));
+  if (!bonspiel.ccmEvent) throw new Error('This bonspiel is not linked to a CCM event');
+  return ccmRegistrants().filter(function (reg) { return reg.eventId === bonspiel.ccmEvent.id; });
+}
+
+function playerFields(reg) {
+  return { name: cleanText(reg.name, 80), email: cleanText(reg.email, 120), status: cleanText(reg.status, 40),
+    drawTime: cleanText(reg.drawTime, 40), notes: cleanText(reg.notes, 500) };
+}
+
+// Brings the players in line with the event's registrations: new ones are added, changed ones updated, and
+// cancelled or removed ones taken off. Positions already ticked are kept. Players added by hand are left alone.
+function importPlayers(body, registrants) {
+  findBonspiel(body.id);
+  var byCcm = {};
+  registrants.forEach(function (reg) { if (!/cancel/i.test(reg.status)) byCcm[reg.id] = reg; });
+  var existing = playersOf(body.id).filter(function (row) { return String(row.ccmId); });
+  var seen = {};
+  var updated = 0;
+  existing.forEach(function (row) {
+    var reg = byCcm[String(row.ccmId)];
+    if (!reg) return;
+    seen[reg.id] = true;
+    var next = playerFields(reg);
+    if (!Object.keys(next).some(function (key) { return String(row[key]) !== next[key]; })) return;
+    Object.keys(next).forEach(function (key) { row[key] = next[key]; });
+    writeRow('Players', row._row, row);
+    updated += 1;
+  });
+  var gone = existing.filter(function (row) { return !byCcm[String(row.ccmId)]; });
+  deleteRows('Players', gone);
+  var added = Object.keys(byCcm).filter(function (id) { return !seen[id]; }).map(function (id) {
+    var reg = byCcm[id];
+    var item = playerFields(reg);
+    item.id = Utilities.getUuid().slice(0, 8);
+    item.bonspielId = String(body.id);
+    item.ccmId = reg.id;
+    item.positions = cleanPositions(reg.positions).join(',');
+    return item;
+  });
+  appendRows('Players', added);
+  return { added: added.length, updated: updated, removed: gone.length, players: playersOf(body.id).map(toPlayer) };
+}
+
+// A player from CCM can only have positions changed, because the next import replaces the rest.
+function savePlayer(body) {
+  var input = body.player || {};
+  findBonspiel(input.bonspielId);
+  var row = input.id ? playersOf(input.bonspielId).filter(function (player) { return String(player.id) === String(input.id); })[0] : null;
+  if (input.id && !row) throw new Error('That player no longer exists');
+  var item = row || { id: Utilities.getUuid().slice(0, 8), bonspielId: String(input.bonspielId), ccmId: '', status: '', drawTime: '' };
+  if (!String(item.ccmId)) {
+    item.name = cleanText(input.name, 80);
+    if (!item.name) throw new Error('Enter the player\'s name');
+    item.email = cleanText(input.email, 120);
+    item.notes = cleanText(input.notes, 500);
+  }
+  item.positions = cleanPositions(input.positions).join(',');
+  if (row) writeRow('Players', row._row, item); else appendRow('Players', item);
+  return { id: item.id };
+}
+
+function deletePlayer(body) {
+  var row = readTab('Players').filter(function (player) { return String(player.id) === String(body.id); })[0];
+  if (!row) return;
+  if (String(row.ccmId)) throw new Error('This player registered through CCM. Cancel the registration there instead.');
+  deleteRows('Players', [row]);
 }
 
 function saveTeam(body) {

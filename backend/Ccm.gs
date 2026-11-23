@@ -73,3 +73,80 @@ function ccmFetch(session, url, options) {
   }
   return res;
 }
+
+// ----- Events Booking registrations
+
+var CCM_EXPORT = CCM_BASE + '?option=com_eventbooking&task=registrant.export';
+var CCM_POSITIONS = { skip: 'skip', mate: 'vice', vice: 'vice', second: 'second', lead: 'lead' };
+
+// Every registration in Events Booking's registrant export, one player each. Only reads the site.
+function ccmRegistrants() {
+  var session = ccmLogin();
+  try {
+    var res = ccmFetch(session, CCM_EXPORT, {});
+    if (res.getResponseCode() !== 200) throw new Error('The admin site returned HTTP ' + res.getResponseCode() + ' for the registrant export.');
+    return registrantsFromRows(xlsxRows(res.getBlob()));
+  } finally {
+    ccmLogout(session);
+  }
+}
+
+function xlsxRows(blob) {
+  blob.setContentType('application/zip');
+  var files = Utilities.unzip(blob);
+  var find = function (name) { return files.filter(function (f) { return f.getName() === name; })[0]; };
+  var sheet = find('xl/worksheets/sheet1.xml');
+  if (!sheet) throw new Error('The registrant export is not the expected Excel file. Try again in a few minutes.');
+  var shared = find('xl/sharedStrings.xml');
+  return parseXlsxSheet(sheet.getDataAsString('UTF-8'), shared ? shared.getDataAsString('UTF-8') : '');
+}
+
+function xmlText(s) {
+  return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+}
+
+// The first worksheet of an .xlsx as rows of strings.
+function parseXlsxSheet(sheetXml, sharedXml) {
+  var shared = [];
+  (sharedXml.match(/<si>[\s\S]*?<\/si>/g) || []).forEach(function (si) {
+    shared.push(xmlText((si.match(/<t[^>]*>[\s\S]*?<\/t>/g) || []).map(function (t) { return t.replace(/<[^>]+>/g, ''); }).join('')));
+  });
+  return (sheetXml.match(/<row[^>]*>[\s\S]*?<\/row>/g) || []).map(function (row) {
+    var out = [];
+    var cell = /<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+    var m;
+    while ((m = cell.exec(row))) {
+      var col = m[1].split('').reduce(function (n, ch) { return n * 26 + ch.charCodeAt(0) - 64; }, 0) - 1;
+      var type = (m[2].match(/t="(\w+)"/) || [])[1];
+      var v = ((m[3] || '').match(/<v>([\s\S]*?)<\/v>/) || [])[1] || '';
+      var t = ((m[3] || '').match(/<t[^>]*>([\s\S]*?)<\/t>/) || [])[1] || '';
+      out[col] = type === 's' ? shared[Number(v)] : type === 'inlineStr' ? xmlText(t) : xmlText(v);
+    }
+    for (var i = 0; i < out.length; i++) if (out[i] === undefined) out[i] = '';
+    return out;
+  });
+}
+
+// Rows of the export, with its header row first, as registrations. A missing column is left blank.
+function registrantsFromRows(rows) {
+  if (!rows.length) return [];
+  var head = rows[0].map(function (h) { return String(h).trim(); });
+  ['ID', 'Event ID', 'Event', 'Event Date', 'First Name', 'Last Name', 'Email', 'Payment Status'].forEach(function (name) {
+    if (head.indexOf(name) < 0) throw new Error('The registrant export has no ' + name + ' column. Has the export changed?');
+  });
+  var get = function (row, name) {
+    var i = head.indexOf(name);
+    return i < 0 || row[i] === undefined ? '' : String(row[i]).trim();
+  };
+  return rows.slice(1).filter(function (row) { return get(row, 'ID'); }).map(function (row) {
+    var date = get(row, 'Event Date').match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+    var preferred = CCM_POSITIONS[get(row, 'Preferred Position').toLowerCase()];
+    return {
+      id: get(row, 'ID'), eventId: get(row, 'Event ID'), event: get(row, 'Event').replace(/\s+/g, ' '),
+      eventDate: date ? date[3] + '-' + ('0' + date[1]).slice(-2) + '-' + ('0' + date[2]).slice(-2) : '',
+      name: (get(row, 'First Name') + ' ' + get(row, 'Last Name')).replace(/\s+/g, ' ').trim(),
+      email: get(row, 'Email'), status: get(row, 'Payment Status'), drawTime: get(row, 'Draw Time'),
+      notes: get(row, 'Notes to the Club'), positions: preferred ? [preferred] : []
+    };
+  });
+}

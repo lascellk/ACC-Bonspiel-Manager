@@ -9,6 +9,14 @@ import { loadBackend } from './gas-fake.js';
 const root = fileURLToPath(new URL('../docs', import.meta.url));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const backend = loadBackend();
+// The club admin site isn't reachable here, so CCM events come from these made-up registrations.
+backend.context.ccmRegistrants = () => [
+  ['1', 'Ann Archer', 'Paid', 'Early Draw', 'Happy to skip', 'Skip'], ['2', 'Bob Baker', 'Pending', 'No preference', '', 'Mate'],
+  ['3', 'Cy Cole', 'Cancelled', '', '', ''], ['4', 'Di Dunn', 'Waiting List', 'Late Draw', 'Can play with Ann', 'Lead'],
+].map(([id, name, status, drawTime, notes, position]) => ({
+  id, eventId: '190', event: 'Sample Turkey Spiel', eventDate: '2026-11-21', name, email: `${name.split(' ')[0].toLowerCase()}@example.com`,
+  status, drawTime, notes, positions: position ? [{ Mate: 'vice' }[position] || position.toLowerCase()] : [],
+})).concat([{ id: '9', eventId: '150', event: 'Sample Spring Spiel', eventDate: '2026-03-21', name: 'Ed Ellis', email: '', status: 'Paid', drawTime: '', notes: '', positions: [] }]);
 const port = Number(process.env.PORT) || 8787;
 
 createServer(async (req, res) => {
