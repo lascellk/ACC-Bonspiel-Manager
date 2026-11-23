@@ -307,6 +307,9 @@ test('the public page opens the bonspiel that is on', async () => {
   const all = [spring, old, turkey];
   assert.equal(currentBonspiel([], null, '2026-11-14'), null);
   assert.equal(currentBonspiel([old], null, '2026-11-14'), old);
+  // An archived bonspiel is never opened by itself, even when its draw is live.
+  assert.equal(currentBonspiel([{ ...old, archived: true }], null, '2026-11-14'), null);
+  assert.equal(currentBonspiel([{ ...turkey, archived: true }, old], { bonspielId: 'turkey', teamsFrom: '' }, '2026-11-21'), old);
   // A live draw wins, whether it belongs to the bonspiel or is a hand-made draw linked to it.
   assert.equal(currentBonspiel(all, { bonspielId: 'spring', teamsFrom: '' }, '2026-11-21'), spring);
   assert.equal(currentBonspiel(all, { bonspielId: '', teamsFrom: 'old' }, '2026-11-21'), old);

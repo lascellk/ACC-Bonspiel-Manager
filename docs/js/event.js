@@ -70,7 +70,8 @@ async function rotateTabs() {
   }
 }
 
-function renderList(bonspiels) {
+function renderList(all) {
+  const bonspiels = all.filter((item) => !item.archived);
   const newestFirst = [...bonspiels].sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)));
   $('#content').innerHTML = `<section class="panel"><h2>Bonspiels</h2>${bonspiels.length ? `<div class="draw-list">${newestFirst.map((item) => `<article class="draw-card">
     <h3><a href="event.html?id=${esc(item.id)}">${esc(item.name)}</a></h3>

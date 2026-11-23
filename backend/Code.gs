@@ -8,7 +8,7 @@ var TABS = {
   Games: ['drawId', 'sheet', 'team1', 'logo1', 'team2', 'logo2', 'stone1', 'hammer', 'ends', 'final',
     'gameId', 'team1Id', 'team2Id', 'phase', 'bracket', 'source1', 'source2'],
   Logos: ['id', 'name', 'data'],
-  Bonspiels: ['id', 'name', 'startDate', 'format', 'settings', 'status'],
+  Bonspiels: ['id', 'name', 'startDate', 'format', 'settings', 'status', 'archived'],
   Teams: ['id', 'bonspielId', 'name', 'skip', 'third', 'second', 'lead', 'club', 'logo', 'seed', 'pool', 'standing']
 };
 var CACHE_KEY = 'live-draw';
@@ -42,6 +42,7 @@ var ACTIONS = {
   deleteLogo: { role: 'admin', fn: deleteLogo },
   saveBonspiel: { role: 'admin', fn: saveBonspiel },
   deleteBonspiel: { role: 'admin', fn: deleteBonspiel },
+  archiveBonspiel: { role: 'admin', fn: archiveBonspiel },
   saveTeam: { role: 'admin', fn: saveTeam },
   deleteTeam: { role: 'admin', fn: deleteTeam },
   saveSeeding: { role: 'admin', fn: saveSeeding },
@@ -622,7 +623,7 @@ function clearLaterSlots(row) {
 function toBonspiel(row) {
   return {
     id: String(row.id), name: String(row.name), startDate: String(row.startDate), format: String(row.format),
-    status: String(row.status), settings: JSON.parse(row.settings || '{}')
+    status: String(row.status), settings: JSON.parse(row.settings || '{}'), archived: String(row.archived) === 'true'
   };
 }
 
@@ -742,6 +743,14 @@ function deleteBonspiel(body) {
   removeDraws(drawsOf(body.id));
   deleteRows('Teams', teamsOf(body.id));
   deleteRows('Bonspiels', [findBonspiel(row.id)]);
+}
+
+// An archived bonspiel keeps everything, but leaves the public list, the TV and the admin pickers.
+function archiveBonspiel(body) {
+  var row = findBonspiel(body.id);
+  row.archived = body.archived ? 'true' : '';
+  writeRow('Bonspiels', row._row, row);
+  if (body.archived && tvBonspiel() === String(row.id)) setTvView({});
 }
 
 function saveTeam(body) {

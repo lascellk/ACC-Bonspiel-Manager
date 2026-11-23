@@ -12,7 +12,7 @@ Keep this file up to date without being asked. As work goes on, add any decision
 - There is no build step, and `npm install` is not needed. The tests use only Node.
 - `docs/` is published by GitHub Pages from `main`, so a push to `main` goes live. Don't put private notes there.
 - A `backend/` change only reaches the live app after `clasp --user clubmgr push --force`, then **Deploy → Manage deployments → Edit → New version**, so the `/exec` address stays the same. Deploy the backend first, then the website.
-- The new-version step can also be run with `clasp --user clubmgr create-deployment --deploymentId <id> --description "..."`, using the id from `API_URL` in `docs/js/config.js`. Clasp can take over a minute per command.
+- The new-version step can also be run with `clasp --user clubmgr create-deployment --deploymentId <id> --description "..."`, using the id from `API_URL` in `docs/js/config.js`. Clasp can take over a minute per command. Run clasp from PowerShell in `D:DEV...` with a capital drive letter: from Git Bash's `/d/...` or a lower-case `d:` path, `push` fails with "Content directory is a symlink", yet `create-deployment` still makes a version with the old code.
 - Tests must not depend on timing: this code can run two writes within a millisecond on a fast computer.
 - Deploy changes live without asking once `npm test` passes, backend first. If tests fail, stop and report. If `TABS` columns change, tell the user to rerun `setup` in the Apps Script editor. This doesn't cover destructive actions such as deleting data or rewriting history.
 - The app is live but still a dev project with no real users, so a live fault isn't urgent.

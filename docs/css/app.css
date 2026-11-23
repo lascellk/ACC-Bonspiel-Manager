@@ -507,3 +507,6 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 
 /* A header link that is a button (Reset results on an ad-hoc draw's results page) */
 .top-button { border: 0; background: transparent; text-decoration: underline; cursor: pointer; }
+.archived-list summary { cursor: pointer; }
+.archived-list summary h2 { display: inline; }
+.archived-list[open] summary { margin-bottom: 12px; }

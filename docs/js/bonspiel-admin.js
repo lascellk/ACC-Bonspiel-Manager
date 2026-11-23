@@ -18,6 +18,8 @@ let preview = null; // Generated draws, not yet saved.
 let picked = null; // The {draw, sheet} chosen first for a swap.
 let timing = { first: '', gap: 180, perDay: 4 };
 let editingStandings = false;
+const ARCHIVE_WARNING = 'Archive this bonspiel? Its teams, draws and results are kept, but it leaves the public page and the admin choices, '
+  + 'and the TV goes back to the scoreboard if it shows it. You can unarchive it any time.';
 
 const openId = () => new URLSearchParams(location.search).get('id');
 const blankBonspiel = () => ({ id: '', name: '', startDate: new Date().toLocaleDateString('en-CA'), format: 'pools', settings: { ...DEFAULT_SETTINGS } });
@@ -59,17 +61,23 @@ async function run(work, done) {
   }
 }
 
+const bonspielCards = (items) => `<div class="draw-list">${items.map((item) => `<article class="draw-card">
+  <h3>${esc(item.name)}</h3>
+  <p>${esc(item.startDate)} · ${esc(FORMATS[item.format])}</p>
+  <footer><button type="button" data-open="${esc(item.id)}">Open</button></footer>
+</article>`).join('')}</div>`;
+
 function renderList() {
   $('#event-link').hidden = true;
   $('#home-link').hidden = true;
+  const current = list.filter((item) => !item.archived);
+  const archived = list.filter((item) => item.archived)
+    .sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)));
   $('#content').innerHTML = `<section class="panel">
     <div class="panel-head"><h2>Bonspiels</h2><button type="button" class="primary" data-action="new">New bonspiel</button></div>
-    ${list.length ? `<div class="draw-list">${list.map((item) => `<article class="draw-card">
-      <h3>${esc(item.name)}</h3>
-      <p>${esc(item.startDate)} · ${esc(FORMATS[item.format])}</p>
-      <footer><button type="button" data-open="${esc(item.id)}">Open</button></footer>
-    </article>`).join('')}</div>` : '<p class="empty">No bonspiels yet. Create the first one.</p>'}
-  </section>`;
+    ${current.length ? bonspielCards(current) : `<p class="empty">${archived.length ? 'No current bonspiels.' : 'No bonspiels yet. Create the first one.'}</p>`}
+  </section>
+  ${archived.length ? `<details class="panel archived-list"><summary><h2>Archived (${archived.length})</h2></summary>${bonspielCards(archived)}</details>` : ''}`;
 }
 
 function renderSteps() {
@@ -97,6 +105,7 @@ function renderDetails() {
   const s = { ...DEFAULT_SETTINGS, ...item.settings };
   $('#content').innerHTML = `<form id="details" class="panel form-grid">
     <h2>Details</h2>
+    ${item.archived ? '<p class="note grow">This bonspiel is archived. Its results are kept, but it is not on the public page, the TV choices or Teams from.</p>' : ''}
     <label class="grow">Name <input name="name" value="${esc(item.name)}" maxlength="60" required></label>
     <label>Start date <input type="date" name="startDate" value="${esc(item.startDate)}"></label>
     <label>Format <select name="format">${Object.entries(FORMATS).map(([value, label]) =>
@@ -117,6 +126,7 @@ function renderDetails() {
     ${gameTypeFields(s.ends, s.minutes)}
     <div class="grow button-row">
       <button type="submit" class="primary">Save details</button>
+      ${item.id ? `<button type="button" data-action="archive-bonspiel">${item.archived ? 'Unarchive' : 'Archive'} bonspiel</button>` : ''}
       ${item.id ? '<button type="button" class="danger" data-action="delete-bonspiel">Delete bonspiel</button>' : ''}
     </div>
   </form>`;
@@ -460,6 +470,12 @@ $('#content').addEventListener('click', (event) => {
       setOpen('');
       step = 0;
     }, 'Bonspiel deleted');
+  }
+  if (action === 'archive-bonspiel') {
+    const archived = !data.bonspiel.archived;
+    if (!archived || confirm(ARCHIVE_WARNING)) {
+      run(() => post('archiveBonspiel', { id: data.bonspiel.id, archived }), archived ? 'Bonspiel archived' : 'Bonspiel back on the public page');
+    }
   }
   if (action === 'add-team') openTeam({ logo: '', seed: data.teams.length + 1 });
   if (action === 'assign-pools') {

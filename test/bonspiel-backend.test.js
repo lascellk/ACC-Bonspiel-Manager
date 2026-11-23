@@ -356,3 +356,20 @@ test('a team\'s new name and logo reach the games of linked hand-made draws', ()
   const unlinked = api.get({ action: 'draws' }).draws.find((draw) => draw.id === other).games[0];
   assert.deepEqual([unlinked.team1, unlinked.logo1], ['a', 'acc']);
 });
+
+test('archiving keeps a bonspiel and its results, takes it off the TV, and can be undone', () => {
+  const { api, id, teams } = withBonspiel();
+  admin(api, { action: 'setTvView', bonspielId: id });
+  assert.equal(scorer(api, { action: 'archiveBonspiel', id, archived: true }).ok, false);
+  assert.match(admin(api, { action: 'archiveBonspiel', id: 'nope', archived: true }).error, /no longer exists/);
+  assert.equal(admin(api, { action: 'archiveBonspiel', id, archived: true }).tv, '');
+  const read = api.get({ action: 'bonspiel', id });
+  assert.equal(read.bonspiel.archived, true);
+  assert.equal(read.teams.length, teams.length);
+  assert.equal(api.get({ action: 'bonspiels' }).bonspiels[0].archived, true);
+  // Saving the details keeps it archived.
+  admin(api, { action: 'saveBonspiel', bonspiel: { id, name: 'Fall 2', startDate: '2026-11-06', format: 'single', settings } });
+  assert.equal(api.get({ action: 'bonspiel', id }).bonspiel.archived, true);
+  admin(api, { action: 'archiveBonspiel', id, archived: false });
+  assert.equal(api.get({ action: 'bonspiel', id }).bonspiel.archived, false);
+});

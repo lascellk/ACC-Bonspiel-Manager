@@ -477,8 +477,9 @@ export const RUNNING_DAYS = 3;
 
 // The bonspiel the public page opens by itself (the table sign's QR code has no id): the one whose draw is live on
 // the scoreboard; otherwise the earliest one started in the last few days or still to come; otherwise the most
-// recent. today is 'YYYY-MM-DD' in local time. Null only when there are no bonspiels.
-export function currentBonspiel(bonspiels, liveDraw, today) {
+// recent. Archived bonspiels are left out. today is 'YYYY-MM-DD' in local time. Null when there are none.
+export function currentBonspiel(all, liveDraw, today) {
+  const bonspiels = all.filter((b) => !b.archived);
   if (!bonspiels.length) return null;
   const owner = liveDraw && [liveDraw.bonspielId, liveDraw.teamsFrom].find((id) => id && bonspiels.some((b) => b.id === id));
   if (owner) return bonspiels.find((b) => b.id === owner);

@@ -42,8 +42,9 @@ function renderTvView() {
   const select = $('#tv-bonspiel');
   $('#tv-view [value=scoreboard]').checked = !tvBonspiel;
   choice.checked = Boolean(tvBonspiel) && !results;
-  choice.disabled = !bonspiels.length;
-  select.innerHTML = bonspiels.map((item) => `<option value="${esc(item.id)}" ${item.id === tvBonspiel ? 'selected' : ''}>${esc(item.name)}</option>`).join('');
+  const shown = bonspiels.filter((item) => !item.archived || item.id === tvBonspiel);
+  choice.disabled = !shown.length;
+  select.innerHTML = shown.map((item) => `<option value="${esc(item.id)}" ${item.id === tvBonspiel ? 'selected' : ''}>${esc(item.name)}</option>`).join('');
   select.hidden = !choice.checked;
   const drawChoice = $('#tv-view [value=results]');
   drawChoice.checked = results;
@@ -123,10 +124,11 @@ function readScoring(data) {
 }
 
 function teamSourceField(draw) {
-  if (draw.bonspielId || !bonspiels.length) return '';
+  const shown = bonspiels.filter((item) => !item.archived || item.id === draw.teamsFrom);
+  if (draw.bonspielId || !shown.length) return '';
   return `<label class="grow">Teams from <select name="teamSource">
     <option value="">No bonspiel</option>
-    ${bonspiels.map((item) => `<option value="${esc(item.id)}" ${item.id === draw.teamsFrom ? 'selected' : ''}>${esc(item.name)}</option>`).join('')}
+    ${shown.map((item) => `<option value="${esc(item.id)}" ${item.id === draw.teamsFrom ? 'selected' : ''}>${esc(item.name)}</option>`).join('')}
   </select></label>`;
 }
 
