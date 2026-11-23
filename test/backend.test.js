@@ -193,3 +193,17 @@ test('reset draw results clears the scores of an ad-hoc draw only', () => {
   const linked = admin(api, { action: 'saveDraw', draw: { name: 'Linked', teamsFrom: bonspiel, games } }).id;
   assert.match(admin(api, { action: 'resetDrawResults', id: linked }).error, /bonspiel/);
 });
+
+test('an archived logo is kept, still used, and can be unarchived', () => {
+  const { api } = withDraw();
+  const { id } = admin(api, { action: 'saveLogo', name: 'Old club', data: 'data:image/png;base64,AAAA' });
+  assert.equal(api.get({ action: 'logos' }).logos[0].archived, false);
+  assert.equal(scorer(api, { action: 'archiveLogo', id, archived: true }).ok, false);
+  assert.match(admin(api, { action: 'archiveLogo', id: 'nope', archived: true }).error, /no longer exists/);
+  assert.equal(admin(api, { action: 'archiveLogo', id, archived: true }).ok, true);
+  assert.deepEqual(api.get({ action: 'logos' }).logos.map((logo) => [logo.id, logo.archived]), [[id, true]]);
+  admin(api, { action: 'renameLogo', id, name: 'Older club' });
+  assert.equal(api.get({ action: 'logos' }).logos[0].archived, true);
+  admin(api, { action: 'archiveLogo', id, archived: false });
+  assert.equal(api.get({ action: 'logos' }).logos[0].archived, false);
+});

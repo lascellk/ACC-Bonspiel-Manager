@@ -277,13 +277,21 @@ function closeSpinDialog() {
   run(() => post('closeSpin'));
 }
 
-function renderLogos() {
-  $('#logo-list').innerHTML = logos.map((logo) => `<li>
+const logoItems = (list) => list.map((logo) => `<li>
     <img class="logo" src="${esc(logo.data)}" alt="">
     <span>${esc(logo.name)}</span>
     <button type="button" data-rename="${esc(logo.id)}">Rename</button>
+    <button type="button" data-archive="${esc(logo.id)}">${logo.archived ? 'Unarchive' : 'Archive'}</button>
     <button type="button" class="danger" data-logo="${esc(logo.id)}">Delete</button>
-  </li>`).join('') || '<li class="empty">No logos added. The ACC crest is always available.</li>';
+  </li>`).join('');
+
+function renderLogos() {
+  const archived = logos.filter((logo) => logo.archived);
+  const open = $('#archived-logos')?.open;
+  $('#logo-list').innerHTML = (logoItems(logos.filter((logo) => !logo.archived))
+    || `<li class="empty">${archived.length ? 'All logos are archived.' : 'No logos added.'} The ACC crest is always available.</li>`)
+    + (archived.length ? `<li class="archived-logos"><details id="archived-logos" ${open ? 'open' : ''}>
+      <summary>Archived logos (${archived.length})</summary><ul class="logo-list">${logoItems(archived)}</ul></details></li>` : '');
 }
 
 // Logos are shrunk in the browser so each one fits in a single Sheet cell.
@@ -383,7 +391,19 @@ $('#logo-file').addEventListener('change', async (event) => {
 });
 
 $('#logo-list').addEventListener('click', async (event) => {
-  const { logo: id, rename } = event.target.dataset;
+  const { logo: id, rename, archive } = event.target.dataset;
+  if (archive) {
+    const archived = !logos.find((logo) => logo.id === archive).archived;
+    try {
+      await post('archiveLogo', { id: archive, archived });
+      logos = await loadLogos();
+      renderLogos();
+      toast(archived ? 'Logo archived' : 'Logo unarchived');
+    } catch (error) {
+      toast(error.message);
+    }
+    return;
+  }
   const name = rename && prompt('Club name for this logo', logos.find((logo) => logo.id === rename).name);
   if (rename && !name) return;
   if (id && !confirm('Delete this logo? Teams using it will show their initials.')) return;

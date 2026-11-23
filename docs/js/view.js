@@ -41,9 +41,10 @@ export async function loadLogos() {
   return result.logos;
 }
 
+// Archived logos are left out, unless one is already chosen.
 export const logoOptions = (list, selected) => `<option value="">Initials</option>
   <option value="acc" ${selected === 'acc' ? 'selected' : ''}>ACC crest</option>
-  ${list.map((logo) => `<option value="${esc(logo.id)}" ${selected === logo.id ? 'selected' : ''}>${esc(logo.name)}</option>`).join('')}`;
+  ${list.filter((logo) => !logo.archived || logo.id === selected).map((logo) => `<option value="${esc(logo.id)}" ${selected === logo.id ? 'selected' : ''}>${esc(logo.name)}</option>`).join('')}`;
 
 // A size in pixels is written on the image too, so it stays small even if the stylesheet is an older copy.
 export function logoHtml(ref, name, size) {

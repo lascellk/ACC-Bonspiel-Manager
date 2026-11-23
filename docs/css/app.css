@@ -510,3 +510,6 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 .archived-list summary { cursor: pointer; }
 .archived-list summary h2 { display: inline; }
 .archived-list[open] summary { margin-bottom: 12px; }
+.logo-list .archived-logos { display: block; }
+.archived-logos summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
+.archived-logos .logo-list { margin-top: 6px; }

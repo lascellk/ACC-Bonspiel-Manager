@@ -7,7 +7,7 @@ var TABS = {
   Draws: ['id', 'name', 'date', 'ends', 'minutes', 'startedAt', 'leftMs', 'showTimer', 'bonspielId', 'startsAt', 'teamsFrom', 'scoring'],
   Games: ['drawId', 'sheet', 'team1', 'logo1', 'team2', 'logo2', 'stone1', 'hammer', 'ends', 'final',
     'gameId', 'team1Id', 'team2Id', 'phase', 'bracket', 'source1', 'source2'],
-  Logos: ['id', 'name', 'data'],
+  Logos: ['id', 'name', 'data', 'archived'],
   Bonspiels: ['id', 'name', 'startDate', 'format', 'settings', 'status', 'archived'],
   Teams: ['id', 'bonspielId', 'name', 'skip', 'third', 'second', 'lead', 'club', 'logo', 'seed', 'pool', 'standing']
 };
@@ -40,6 +40,7 @@ var ACTIONS = {
   saveLogo: { role: 'admin', fn: saveLogo },
   renameLogo: { role: 'admin', fn: renameLogo },
   deleteLogo: { role: 'admin', fn: deleteLogo },
+  archiveLogo: { role: 'admin', fn: archiveLogo },
   saveBonspiel: { role: 'admin', fn: saveBonspiel },
   deleteBonspiel: { role: 'admin', fn: deleteBonspiel },
   archiveBonspiel: { role: 'admin', fn: archiveBonspiel },
@@ -68,7 +69,7 @@ function setup() {
 function doGet(e) {
   var params = (e && e.parameter) || {};
   return respond(function () {
-    if (params.action === 'logos') return { logos: readTab('Logos') };
+    if (params.action === 'logos') return { logos: readTab('Logos').map(toLogo) };
     if (params.action === 'draws') return { draws: allDraws(), liveId: liveId() };
     if (params.action === 'bonspiels') return { bonspiels: readTab('Bonspiels').map(toBonspiel) };
     if (params.action === 'bonspiel') return cachedBonspiel(params.id);
@@ -399,12 +400,28 @@ function saveLogo(body) {
   return { id: item.id };
 }
 
-function renameLogo(body) {
-  var row = readTab('Logos').filter(function (logo) { return String(logo.id) === String(body.id); })[0];
+function toLogo(row) {
+  return { id: String(row.id), name: String(row.name), data: String(row.data), archived: String(row.archived) === 'true' };
+}
+
+function findLogo(id) {
+  var row = readTab('Logos').filter(function (logo) { return String(logo.id) === String(id); })[0];
   if (!row) throw new Error('That logo no longer exists');
+  return row;
+}
+
+function renameLogo(body) {
+  var row = findLogo(body.id);
   var name = cleanText(body.name, 40);
   if (!name) throw new Error('Enter a club name');
   row.name = name;
+  writeRow('Logos', row._row, row);
+}
+
+// An archived logo still shows wherever it is used, but leaves the logo choices.
+function archiveLogo(body) {
+  var row = findLogo(body.id);
+  row.archived = body.archived ? 'true' : '';
   writeRow('Logos', row._row, row);
 }
 
