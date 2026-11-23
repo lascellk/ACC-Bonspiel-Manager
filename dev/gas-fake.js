@@ -47,6 +47,13 @@ export function loadBackend(properties = { ADMIN_PIN: '1234', SCORE_PIN: '0000' 
       }),
     },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    // Records emails; set api.mailFails to make sending throw.
+    MailApp: {
+      sendEmail: (message) => {
+        if (api.mailFails) throw new Error('mail is off');
+        emails.push(message);
+      },
+    },
     ContentService: {
       MimeType: { JSON: 'json' },
       createTextOutput: (text) => ({ setMimeType() { return text; } }),
@@ -61,11 +68,13 @@ export function loadBackend(properties = { ADMIN_PIN: '1234', SCORE_PIN: '0000' 
     },
   });
   const fetches = [];
+  const emails = [];
   for (const file of ['Code.gs', 'Ccm.gs']) vm.runInContext(readFileSync(new URL(`../backend/${file}`, import.meta.url), 'utf8'), context);
   context.setup();
   const api = {
     tabs,
     fetches,
+    emails,
     fetchReply: () => '{"ok":true}',
     context,
     get: (parameter = {}) => JSON.parse(context.doGet({ parameter })),

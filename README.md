@@ -114,7 +114,8 @@ This app has its own Sheet and Apps Script project, separate from the live ACC S
 4. Click **Deploy → New deployment → Web app**, with *Execute as* **Me** and *Who has access* **Anyone**. Copy the `/exec` address.
 
 5. To link the rink draw clock, add `DRAW_CLOCK_URL` (the Draw Clock's `/exec` address) and `DRAW_CLOCK_KEY` (the same text as `SYNC_KEY` in the Draw Clock's Script properties). Then choose `testDrawClock` and click **Run**: it asks once for permission to connect to an external service and logs whether the Draw Clock accepted the key. Leave both properties unset to keep the clock unlinked.
-6. To let the backend log in to the club website's admin site (Curling Club Manager, `almontecurling.ca/administrator`), add `CCM_USER` and `CCM_PASSWORD`, the same login the Payment Tracker uses. Then choose `checkCcmLogin` in `Ccm.gs` and click **Run**: it logs in, logs out and says whether it worked. The Players step uses it to read Events Booking's registrant export. It only reads the site.
+6. Choose `testLockoutEmail` and click **Run**. It asks once for permission to send email, then sends the PIN lockout email to clubmgr@almontecurling.ca so you can see it arrives. Add a `LOCKOUT_EMAIL` script property to send it to someone else.
+7. To let the backend log in to the club website's admin site (Curling Club Manager, `almontecurling.ca/administrator`), add `CCM_USER` and `CCM_PASSWORD`, the same login the Payment Tracker uses. Then choose `checkCcmLogin` in `Ccm.gs` and click **Run**: it logs in, logs out and says whether it worked. The Players step uses it to read Events Booking's registrant export. It only reads the site.
 
 After changing `Code.gs`, push it, then use **Deploy → Manage deployments → Edit → New version** so the `/exec` address stays the same.
 
@@ -157,5 +158,5 @@ npm run dev   # http://localhost:8787, admin PIN 1234, score PIN 0000
 
 - Apps Script is free but not instant. The first request after a quiet spell can take a few seconds.
 - The two PINs keep casual visitors out. They are not strong security, and the scoreboard itself is public to anyone with the link.
-- To stop anyone guessing a PIN, each wrong PIN takes a second to answer, and after 10 wrong PINs every PIN, even the right one, is refused for 15 minutes from the last wrong one, as in the 50/50 app. This locks out the organisers and scorers too, so if it happens during an event, open the Apps Script project, choose `clearPinLockout` and click **Run** to lift it straight away. If someone is really guessing, change the PINs in **Project Settings → Script properties** too.
+- To stop anyone guessing a PIN, each wrong PIN takes a second to answer, and after 10 wrong PINs every PIN, even the right one, is refused for 15 minutes from the last wrong one, as in the 50/50 app. This locks out the organisers and scorers too, so if it happens during an event, open the Apps Script project, choose `clearPinLockout` and click **Run** to lift it straight away. When a lockout starts, the backend emails clubmgr@almontecurling.ca (or whoever the `LOCKOUT_EMAIL` script property names) with what to do. If someone is really guessing, change the PINs in **Project Settings → Script properties** too.
 - The original artwork in `Reference/` is kept out of the repository. The site uses the smaller copies in `docs/assets/`.

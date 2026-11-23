@@ -25,6 +25,8 @@ var MAX_LOGO_CHARS = 45000; // A Sheet cell holds 50,000 characters.
 // As in the 50/50 app, so guessing a 4-digit PIN takes days.
 var MAX_PIN_FAILURES = 10;
 var PIN_LOCK_SECONDS = 15 * 60;
+// Who is emailed when a lockout starts. The LOCKOUT_EMAIL script property can name someone else.
+var LOCKOUT_EMAIL = 'clubmgr@almontecurling.ca';
 var STANDING_FIELDS = ['played', 'won', 'tied', 'lost', 'endsWon', 'scored', 'points', 'diff'];
 var SPIN_MAX_MS = 30 * 60000; // The wheels leave the TV by themselves if the admin page goes away.
 
@@ -96,7 +98,7 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents);
     var action = ACTIONS[body.action];
     if (!action) throw new Error('Unknown action');
-    var role = checkPin(body.pin, action.role);
+    var role = checkPin(body.pin, action.role, body.action);
     if (action.noLock) {
       var read = action.fn(body) || {};
       read.role = role;
@@ -132,13 +134,41 @@ function respond(work) {
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
 
+// Tells the club manager a lockout has started, once per lockout. A failed email never stops the request.
+function emailLockout(actionName) {
+  var when = Utilities.formatDate(new Date(), 'America/Toronto', "EEEE, MMMM d 'at' h:mm a");
+  try {
+    MailApp.sendEmail({
+      to: PropertiesService.getScriptProperties().getProperty('LOCKOUT_EMAIL') || LOCKOUT_EMAIL,
+      subject: 'ACC Bonspiel Manager: PIN locked after ' + MAX_PIN_FAILURES + ' wrong PINs',
+      body: 'The Bonspiel Manager had ' + MAX_PIN_FAILURES + ' wrong PINs in a row, the last on ' + when +
+        (actionName ? ' (trying "' + actionName + '")' : '') + '.\n\n' +
+        'Every PIN, including the right ones, is now refused for 15 minutes after the last wrong one. ' +
+        'Organisers and scorers are locked out too.\n\n' +
+        'If it was someone at the club mistyping, it clears by itself, or open the Apps Script project, choose ' +
+        'clearPinLockout and click Run to lift it now.\n\n' +
+        'If someone may be guessing the PINs, change ADMIN_PIN and SCORE_PIN in Project Settings > Script properties, ' +
+        'then tell the organisers and scorers the new ones.\n\n' +
+        'Google does not say where the requests came from, so this email cannot say who it was.'
+    });
+  } catch (err) {
+    console.error('Could not email the PIN lockout: ' + err.message);
+  }
+}
+
+// Run once from the editor to approve sending email, and to check the lockout email arrives.
+function testLockoutEmail() {
+  emailLockout('a test from the editor');
+  console.log('Sent a test lockout email to ' + (PropertiesService.getScriptProperties().getProperty('LOCKOUT_EMAIL') || LOCKOUT_EMAIL) + '.');
+}
+
 // Run from the editor to lift a PIN lockout straight away, for example when it happens during an event.
 function clearPinLockout() {
   CacheService.getScriptCache().remove('pin-failures');
   console.log('PIN lockout cleared.');
 }
 
-function checkPin(pin, role) {
+function checkPin(pin, role, actionName) {
   var cache = CacheService.getScriptCache();
   var failures = Number(cache.get('pin-failures')) || 0;
   if (failures >= MAX_PIN_FAILURES) throw new Error('Too many wrong PINs. Try again in 15 minutes.');
@@ -149,6 +179,7 @@ function checkPin(pin, role) {
   var held = pin && pin === adminPin ? 'admin' : pin && pin === scorePin ? 'score' : '';
   if (!held) {
     cache.put('pin-failures', String(failures + 1), PIN_LOCK_SECONDS);
+    if (failures + 1 === MAX_PIN_FAILURES) emailLockout(actionName);
     Utilities.sleep(1000); // Slows down guessing.
   }
   if (!held || (role === 'admin' && held !== 'admin')) throw new Error('Wrong PIN');

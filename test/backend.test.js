@@ -218,3 +218,28 @@ test('a PIN lockout can be lifted from the editor', () => {
   api.context.clearPinLockout();
   assert.equal(api.post({ pin: '1234', action: 'login' }).ok, true);
 });
+
+test('the club manager is emailed once when a PIN lockout starts', () => {
+  const { api } = withDraw();
+  for (let i = 0; i < 9; i++) api.post({ pin: 'x', action: 'setEnd' });
+  assert.equal(api.emails.length, 0);
+  api.post({ pin: 'x', action: 'setEnd' });
+  assert.equal(api.emails.length, 1);
+  assert.equal(api.emails[0].to, 'clubmgr@almontecurling.ca');
+  assert.match(api.emails[0].subject, /PIN locked/);
+  assert.match(api.emails[0].body, /clearPinLockout/);
+  assert.match(api.emails[0].body, /"setEnd"/);
+  for (let i = 0; i < 5; i++) api.post({ pin: 'x', action: 'login' });
+  assert.equal(api.emails.length, 1);
+});
+
+test('a lockout email that cannot be sent still locks, and goes to LOCKOUT_EMAIL when set', () => {
+  const api = loadBackend({ ADMIN_PIN: '1234', SCORE_PIN: '0000', LOCKOUT_EMAIL: 'someone@example.com' });
+  api.mailFails = true;
+  for (let i = 0; i < 10; i++) assert.equal(api.post({ pin: 'x', action: 'login' }).error, 'Wrong PIN');
+  assert.match(api.post({ pin: '1234', action: 'login' }).error, /Too many/);
+  api.mailFails = false;
+  api.context.clearPinLockout();
+  for (let i = 0; i < 10; i++) api.post({ pin: 'x', action: 'login' });
+  assert.equal(api.emails[0].to, 'someone@example.com');
+});
