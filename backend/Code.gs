@@ -355,7 +355,11 @@ function saveDraw(body) {
 }
 
 function deleteDraw(body) {
-  if (findDraw(body.id).bonspielId) throw new Error('This draw belongs to a bonspiel. Change it on the bonspiel page.');
+  var draw = findDraw(body.id);
+  if (draw.bonspielId) throw new Error('This draw belongs to a bonspiel. Change it on the bonspiel page.');
+  // A hand-made draw linked to an archived bonspiel holds that bonspiel's results.
+  var linked = draw.teamsFrom && readTab('Bonspiels').filter(function (row) { return String(row.id) === String(draw.teamsFrom); })[0];
+  if (linked && String(linked.archived) === 'true') throw new Error('This draw holds results for an archived bonspiel. Unarchive the bonspiel to delete it.');
   deleteRows('Games', readTab('Games').filter(function (g) { return String(g.drawId) === String(body.id); }));
   deleteRows('Draws', readTab('Draws').filter(function (d) { return String(d.id) === String(body.id); }));
   if (liveId() === String(body.id)) PropertiesService.getScriptProperties().deleteProperty('LIVE_DRAW');

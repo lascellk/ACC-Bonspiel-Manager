@@ -373,3 +373,16 @@ test('archiving keeps a bonspiel and its results, takes it off the TV, and can b
   admin(api, { action: 'archiveBonspiel', id, archived: false });
   assert.equal(api.get({ action: 'bonspiel', id }).bonspiel.archived, false);
 });
+
+test('a hand-made draw linked to an archived bonspiel cannot be deleted until it is unarchived', () => {
+  const { api, id } = withBonspiel();
+  const saved = admin(api, { action: 'saveDraw', draw: { name: 'Linked', date: '2026-11-06', ends: 8, minutes: 95, teamsFrom: id,
+    games: [1, 2, 3, 4].map((sheet) => ({ sheet, team1: 'A', team2: 'B', logo1: '', logo2: '', stone: 'red', hammer: 0 })) } });
+  assert.equal(saved.ok, true, saved.error);
+  const drawId = api.get({ action: 'draws' }).draws.find((draw) => draw.name === 'Linked').id;
+  admin(api, { action: 'archiveBonspiel', id, archived: true });
+  assert.match(admin(api, { action: 'deleteDraw', id: drawId }).error, /archived bonspiel/);
+  assert.equal(api.get({ action: 'bonspiel', id }).linkedDraws.length, 1);
+  admin(api, { action: 'archiveBonspiel', id, archived: false });
+  assert.equal(admin(api, { action: 'deleteDraw', id: drawId }).ok, true);
+});

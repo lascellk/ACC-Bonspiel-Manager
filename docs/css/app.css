@@ -539,3 +539,6 @@ input[type="radio"], input[type="checkbox"] { width: 20px; min-height: 20px; mar
 .pick.misfit { border-color: #e0912f; background: color-mix(in srgb, #e0912f 16%, var(--card)); }
 .pick.on { outline: 3px solid var(--gold); outline-offset: 1px; }
 .made-out { margin: 12px 0 6px; font-size: 15px; }
+.archived-draws { grid-column: 1 / -1; }
+.archived-draws summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
+.archived-draws .note { margin: 4px 0 8px; }

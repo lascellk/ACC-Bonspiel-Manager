@@ -60,8 +60,25 @@ function matchup(game) {
 
 const bonspielName = (id) => bonspiels.find((item) => item.id === id)?.name;
 
+// A draw of an archived bonspiel, its own or a hand-made one linked to it, holds that bonspiel's results. It is kept
+// out of the way and can't be deleted or made live, unless it is live already.
+const archivedDraw = (draw) => draw.id !== liveId
+  && [draw.bonspielId, draw.teamsFrom].some((id) => id && bonspiels.find((item) => item.id === id)?.archived);
+
 function renderDraws() {
-  $('#draw-list').innerHTML = draws.length ? draws.map((draw) => `<article class="draw-card ${draw.id === liveId ? 'is-live' : ''}">
+  const current = draws.filter((draw) => !archivedDraw(draw));
+  const archived = draws.filter(archivedDraw);
+  const open = $('#archived-draws')?.open;
+  $('#draw-list').innerHTML = (current.length ? current.map(drawCard).join('')
+    : `<p class="empty">${archived.length ? 'No current draws.' : 'No draws yet. Create the first one.'}</p>`)
+    + (archived.length ? `<details id="archived-draws" class="archived-draws" ${open ? 'open' : ''}>
+      <summary>Archived draws (${archived.length})</summary>
+      <p class="note">These belong to archived bonspiels and hold their results. Unarchive the bonspiel to use them again.</p>
+      <div class="draw-list">${archived.map((draw) => drawCard(draw, true)).join('')}</div></details>` : '');
+}
+
+function drawCard(draw, archived = false) {
+  return `<article class="draw-card ${draw.id === liveId ? 'is-live' : ''}">
     <header>
       <div><h3>${esc(draw.name)}${draw.id === liveId ? ' <span class="badge">Live</span>' : ''}</h3>
       <p>${esc(draw.startsAt.replace('T', ' ') || draw.date)} · ${draw.ends} ends · ${draw.minutes} min${draw.showTimer ? '' : ' (timer hidden)'}</p>
@@ -70,11 +87,11 @@ function renderDraws() {
     <ol>${draw.games.map((game) => `<li>${matchup(game)}</li>`).join('')}</ol>
     <footer>
       <button type="button" data-edit="${draw.id}">Edit</button>
-      ${draw.id === liveId ? '<button type="button" data-stop-live="true">Take off live</button>' : `<button type="button" class="primary" data-live="${draw.id}">Make live</button>`}
+      ${archived ? '' : draw.id === liveId ? '<button type="button" data-stop-live="true">Take off live</button>' : `<button type="button" class="primary" data-live="${draw.id}">Make live</button>`}
       ${adHoc(draw) ? `<a class="top-link dark" href="event.html?draw=${esc(draw.id)}" target="_blank" rel="noopener">Results</a>` : ''}
-      ${draw.bonspielId ? '' : `<button type="button" class="danger" data-delete="${draw.id}">Delete</button>`}
+      ${draw.bonspielId || archived ? '' : `<button type="button" class="danger" data-delete="${draw.id}">Delete</button>`}
     </footer>
-  </article>`).join('') : '<p class="empty">No draws yet. Create the first one.</p>';
+  </article>`;
 }
 
 function gameFields(game) {
