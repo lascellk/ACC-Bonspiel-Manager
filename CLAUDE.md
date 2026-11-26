@@ -48,3 +48,6 @@ Keep this file up to date without being asked. As work goes on, add any decision
 - The logos were uploaded from the admin page with `saveLogo` and then given to each team with `saveTeam`. In the shared Logos list, each logo is named after its team.
 - To change a logo's image, upload the new image, point the team at it, and then delete the old logo. There is no action that replaces a logo's image.
 - Grinch Squad is the user's own team. Its logo is an original design (a green stone in a Santa hat carrying a sack of stolen stones), not the Dr. Seuss character, and any changes should keep it that way.
+## Notes
+
+Record open issues, incidents and follow-ups in NOTES.md (newest first) and push it, so they reach every computer. Read it at the start of a session. Mark an entry resolved when it is. This repo is public: keep logins, script ids and other sensitive details in a private repo and point to it.
