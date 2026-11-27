@@ -51,7 +51,8 @@ function ccmFetch(session, url, options) {
   var res;
   for (var hop = 0; hop < 5; hop++) {
     var cookie = Object.keys(session.cookies).map(function (k) { return k + '=' + session.cookies[k]; }).join('; ');
-    var headers = { 'User-Agent': CCM_UA };
+    // Referer on every request, as a browser sends it: the host's firewall flags a login POST without one (ticket #19684, 2026-11-27).
+    var headers = { 'User-Agent': CCM_UA, Referer: CCM_BASE };
     if (cookie) headers.Cookie = cookie;
     res = UrlFetchApp.fetch(url, Object.assign({ muteHttpExceptions: true, followRedirects: false, headers: headers }, options));
     var all = res.getAllHeaders();
