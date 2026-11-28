@@ -67,6 +67,11 @@ function ccmFetch(session, url, options) {
       if (!value || value === 'deleted') delete session.cookies[name]; else session.cookies[name] = value;
     });
     var code = res.getResponseCode();
+    // The host's firewall answers some Google addresses with a JavaScript bot check that UrlFetchApp can't pass.
+    if (code === 200 && /<title[^>]*>\s*One moment, please/i.test(res.getContentText())) {
+      throw new Error('The web host\'s bot check ("One moment, please...") blocked the request to the admin site. This is on the host\'s side, not the password: try again later.');
+    }
+    if (code === 403) throw new Error('The admin site refused the request (HTTP 403). This is the web host\'s bot protection, not the password: try again later.');
     var location = all.Location || all.location;
     if (code < 300 || code >= 400 || !location) return res;
     url = /^https?:/i.test(location) ? location : 'https://almontecurling.ca' + (location.charAt(0) === '/' ? '' : '/administrator/') + location;
