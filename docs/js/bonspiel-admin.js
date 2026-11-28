@@ -846,6 +846,15 @@ $('#team-dialog').addEventListener('click', (event) => {
   if (event.target.classList.contains('close')) $('#team-dialog').close();
 });
 
+// Picking a club's logo fills in the Club box with that club's name. Team logos (named after a team, not a
+// club) and Initials leave it alone, and the name can still be changed by hand afterwards.
+$('#team-dialog').addEventListener('change', (event) => {
+  const select = event.target;
+  if (select.name !== 'logo' || select.form?.getAttribute('id') !== 'team-form') return;
+  const name = select.value === 'acc' ? 'Almonte Curling Club' : logos.find((logo) => logo.id === select.value)?.name || '';
+  if (/\b(curling|club|centre|center)\b/i.test(name)) select.form.elements.club.value = name;
+});
+
 $('#team-dialog').addEventListener('submit', (event) => {
   event.preventDefault();
   if (event.target.classList.contains('copied')) {
