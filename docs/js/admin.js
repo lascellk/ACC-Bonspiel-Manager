@@ -69,7 +69,7 @@ function renderDraws() {
   const current = draws.filter((draw) => !archivedDraw(draw));
   const archived = draws.filter(archivedDraw);
   const open = $('#archived-draws')?.open;
-  $('#draw-list').innerHTML = (current.length ? current.map(drawCard).join('')
+  $('#draw-list').innerHTML = (current.length ? current.map((draw) => drawCard(draw)).join('')
     : `<p class="empty">${archived.length ? 'No current draws.' : 'No draws yet. Create the first one.'}</p>`)
     + (archived.length ? `<details id="archived-draws" class="archived-draws" ${open ? 'open' : ''}>
       <summary>Archived draws (${archived.length})</summary>
