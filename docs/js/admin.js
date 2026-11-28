@@ -334,7 +334,22 @@ function renderLive() {
   if (live) $('#timer-draw').textContent = live.name;
 }
 
-$('#new-draw').addEventListener('click', () => openEditor(blankDraw()));
+// Bonspiels made in another tab since this page loaded must show under Teams from, so the list is
+// fetched again each time the editor opens. If that fails, the list already loaded is used.
+async function openWithBonspiels(button, makeDraw) {
+  button.disabled = true;
+  try {
+    bonspiels = (await get('bonspiels')).bonspiels;
+    renderTvView();
+  } catch (error) {
+    // Keep the list loaded earlier.
+  } finally {
+    button.disabled = false;
+  }
+  openEditor(makeDraw());
+}
+
+$('#new-draw').addEventListener('click', (event) => openWithBonspiels(event.currentTarget, blankDraw));
 
 $('#tv-view').addEventListener('change', () => {
   const drawId = $('#tv-view [value=results]').checked ? $('#tv-draw').value : '';
@@ -348,7 +363,7 @@ $('#tv-view').addEventListener('change', () => {
 
 $('#draw-list').addEventListener('click', (event) => {
   const { edit, live: makeLive, stopLive, delete: remove } = event.target.dataset;
-  if (edit) openEditor(structuredClone(draws.find((draw) => draw.id === edit)));
+  if (edit) openWithBonspiels(event.target, () => structuredClone(draws.find((draw) => draw.id === edit)));
   if (makeLive) run(() => post('goLive', { id: makeLive }), 'Draw is live');
   if (stopLive && confirm(STOP_LIVE_WARNING)) run(() => post('stopLive'), 'Draw taken off live');
   if (remove && confirm('Delete this draw and all its scores?')) run(() => post('deleteDraw', { id: remove }), 'Draw deleted');
