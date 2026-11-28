@@ -230,6 +230,11 @@ test('standings rank on points, then head-to-head', () => {
   assert.equal(two[0].team.id, 't2');
   assert.equal(two[0].points, 2);
 });
+test('teams still tied are listed by seed, including before any game', () => {
+  const [a, b, c, d] = makeTeams(4);
+  const teams = [{ ...c, seed: 3 }, { ...a, seed: 1 }, { ...d, seed: '' }, { ...b, seed: 2 }];
+  assert.deepEqual(standings(teams, [], settings).map((row) => row.team.id), ['t1', 't2', 't3', 't4']);
+});
 test('head-to-head beats a better difference', () => {
   const teams = makeTeams(3);
   const rows = standings(teams, [played('t1', 't2', 3, 2), played('t2', 't3', 8, 1), played('t3', 't1', 1, 0)], { ...settings });

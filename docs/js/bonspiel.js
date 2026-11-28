@@ -309,6 +309,8 @@ function pointsFor(settings, mine, theirs) {
   return mine === theirs ? settings.pointsTie : settings.pointsLoss;
 }
 
+const seedOrder = (team) => Number(team.seed) || Infinity;
+
 const endsWon = (game, side) => game.ends.filter((end) => end.team === side && end.pts > 0).length;
 
 // A limit of 0 counts every point. The limit never changes the game's real score.
@@ -371,7 +373,8 @@ export function standings(teams, games, settings, opponents = teams) {
     return groupBy(level, (item) => score.get(item.team.id)).flatMap((group) =>
       groupBy(group, (item) => item.diff).flatMap((still) => {
         if (still.length > 1) still.forEach((item) => { item.unresolved = true; });
-        return still;
+        // Still tied (every team, before any game is played): listed by seed, so the order is the organiser's.
+        return still.sort((a, b) => seedOrder(a.team) - seedOrder(b.team));
       }));
   });
   return ranked.map((item, i) => ({ ...item, rank: i + 1 }));
